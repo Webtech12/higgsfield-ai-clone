@@ -1,0 +1,13 @@
+# Logged verbatim for the graders: never reformat (AGENTS.md §12).
+.agent-logs/
+.claude/
+
+# Hand-written prose; reformatting tables would only add diff noise.
+*.md
+
+# Generated
+package-lock.json
+drizzle/
+.next/
+test-results/
+playwright-report/
