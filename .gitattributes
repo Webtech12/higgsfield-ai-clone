@@ -1,0 +1,2 @@
+# Agent logs are committed byte-for-byte: no CRLF conversion on Windows checkouts.
+.agent-logs/** -text
