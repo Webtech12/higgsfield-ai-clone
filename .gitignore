@@ -5,3 +5,6 @@
 # because every prompt is logged verbatim to .agent-logs/, which is public.
 .env*
 !.env.example
+
+# Local state of the gstack headless browser (research and QA runs)
+.gstack/
