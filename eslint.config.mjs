@@ -152,6 +152,8 @@ export default defineConfig([
       "max-lines-per-function": ["warn", { max: 150, skipBlankLines: true, skipComments: true }],
     },
   },
+  // Test files group cases in describe() callbacks; their length says nothing about design.
+  { files: ["**/*.test.{ts,tsx}"], rules: { "max-lines-per-function": "off" } },
 
   // Vendor isolation, most general first.
   { files: ["src/**/*.{ts,tsx}"], rules: restrict(VENDOR_SDKS, DRIZZLE, BETTER_AUTH) },

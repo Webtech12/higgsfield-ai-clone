@@ -12,11 +12,32 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: director
+          POSTGRES_PASSWORD: director
+          POSTGRES_DB: director
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U director"
+          --health-interval 2s --health-timeout 3s --health-retries 20
+
     env:
       # CI runs entirely on fakes: no provider keys, no spend (AGENTS.md §11).
       PROVIDERS: fake
+      # Throwaway CI database and auth secret: not real credentials.
+      DATABASE_URL: postgres://director:director@localhost:5432/director
+      DATABASE_URL_UNPOOLED: postgres://director:director@localhost:5432/director
+      BETTER_AUTH_SECRET: ci-only-auth-secret-not-used-anywhere-else
+      BETTER_AUTH_URL: http://localhost:3100
+      NEXT_PUBLIC_APP_URL: http://localhost:3100
+      INNGEST_DEV: "1"
       NEXT_TELEMETRY_DISABLED: "1"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -30,11 +51,21 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
+      - run: npm run db:migrate
       - run: npm run build
+
+      - name: Start the app and the Inngest dev server
+        run: |
+          npm run start -- --port 3100 &
+          npx inngest-cli dev --no-discovery -u http://localhost:3100/api/inngest &
+          npx wait-on --timeout 120000 http://localhost:3100 http://localhost:8288
+          curl -fsS -X PUT http://localhost:3100/api/inngest
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+        env:
+          E2E_BASE_URL: http://localhost:3100
 
       - name: Upload Playwright report
         if: failure()
