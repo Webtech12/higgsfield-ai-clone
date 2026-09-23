@@ -1,1 +1,1 @@
-export { ProjectWorkspace } from "./components/ProjectWorkspace";
+export { Board } from "./components/Board";

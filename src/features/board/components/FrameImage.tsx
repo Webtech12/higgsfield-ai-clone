@@ -3,12 +3,7 @@ import { ImageOff, LoaderCircle } from "lucide-react";
 import type { AspectRatio } from "@/contracts/brief";
 import type { FrameState } from "@/entities/project";
 import { cn } from "@/shared/lib/cn";
-
-const ASPECT_CLASS = {
-  "16:9": "aspect-video",
-  "9:16": "aspect-[9/16]",
-  "1:1": "aspect-square",
-} satisfies Record<AspectRatio, string>;
+import { ASPECT_CLASS } from "@/shared/ui";
 
 /** One storyboard frame with its designed waiting, drawing, failed and ready states. */
 export function FrameImage({

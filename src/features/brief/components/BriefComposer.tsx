@@ -9,6 +9,7 @@ import { Controller, useForm } from "react-hook-form";
 
 import { BRIEF_IDEA_MAX, BRIEF_IDEA_MIN, BriefInput } from "@/contracts/brief";
 import { CreateProjectResponse } from "@/contracts/project";
+import { useRefreshMe } from "@/entities/viewer";
 import { apiRequest } from "@/shared/lib/apiClient";
 import { errorMessage } from "@/shared/lib/apiErrors";
 import { Button } from "@/shared/ui";
@@ -24,10 +25,13 @@ export function BriefComposer() {
     resolver: zodResolver(BriefInput),
     defaultValues: { idea: "", aspectRatio: "16:9", styles: [] },
   });
+  const refreshMe = useRefreshMe();
   const create = useMutation({
     mutationFn: (brief: BriefInput) =>
       apiRequest("/projects", CreateProjectResponse, { method: "POST", body: brief }),
     onSuccess: ({ projectId }) => {
+      // The first brief creates the guest, so the header can now show their starter credits.
+      void refreshMe();
       router.push(`/p/${projectId}`);
     },
   });

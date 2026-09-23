@@ -79,18 +79,17 @@ export function ShotCard({
           >
             <Pencil aria-hidden /> Edit
           </Button>
-          {shot.frameStale ? (
-            <>
-              <span className="text-xs text-primary">Frame out of date</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={actions.onRedraw}
-                disabled={actions.isRedrawing || (state.kind === "ready" && state.isRedrawing)}
-              >
-                <RefreshCw aria-hidden /> Redraw frame
-              </Button>
-            </>
+          {shot.frameStale ? <span className="text-xs text-primary">Frame out of date</span> : null}
+          {/* A failed frame blocks production, so it can be redrawn without editing first. */}
+          {shot.frameStale || state.kind === "failed" ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={actions.onRedraw}
+              disabled={actions.isRedrawing || (state.kind === "ready" && state.isRedrawing)}
+            >
+              <RefreshCw aria-hidden /> Redraw frame
+            </Button>
           ) : null}
         </div>
       ) : null}

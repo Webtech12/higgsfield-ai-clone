@@ -3,8 +3,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
-import type { UpdateShotInput } from "@/contracts/project";
+import { ProduceResponse, type UpdateShotInput } from "@/contracts/project";
 import { projectKeys } from "@/entities/project";
+import { viewerKeys } from "@/entities/viewer";
 import { apiRequest } from "@/shared/lib/apiClient";
 
 const Ok = z.object({ ok: z.literal(true) });
@@ -38,5 +39,13 @@ export function useBoardActions(projectId: string) {
     onSettled: refresh,
   });
 
-  return { selectDirection, updateShot, redrawFrame };
+  // Spends credits: refresh the balance too. A double click is harmless (the server answers 409).
+  const produce = useMutation({
+    mutationFn: () => apiRequest(`${base}/productions`, ProduceResponse, { method: "POST" }),
+    onSettled: async () => {
+      await Promise.all([refresh(), queryClient.invalidateQueries({ queryKey: viewerKeys.me })]);
+    },
+  });
+
+  return { selectDirection, updateShot, redrawFrame, produce };
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import type { WorkspaceView } from "@/contracts/project";
-import { Button } from "@/shared/ui";
 
 import type { useBoardActions } from "../hooks/useBoardActions";
 import { DirectionCard } from "./DirectionCard";
+import { ProduceBar } from "./ProduceBar";
 import type { ShotCardActions } from "./ShotCard";
 
 /**
@@ -55,18 +55,8 @@ export function DirectionList({
               }}
               shotActions={view.isOwner && isSelected ? shotActions : null}
             />
-            {isSelected ? (
-              <div className="mt-4 flex flex-col items-start gap-1 rounded-xl border border-dashed border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Next: turn these three shots into video, each starting from its frame.
-                </p>
-                <div className="flex flex-col items-start gap-1 sm:items-end">
-                  <Button disabled>Produce 3 shots · 30 credits</Button>
-                  <span className="text-xs text-muted-foreground">
-                    Production opens with the next deploy.
-                  </span>
-                </div>
-              </div>
+            {isSelected && view.isOwner && view.status === "selected" ? (
+              <ProduceBar view={view} produce={actions.produce} />
             ) : null}
           </div>
         );

@@ -1,0 +1,155 @@
+import type { AspectRatio } from "@/contracts/brief";
+import type { ShotView, WorkspaceView } from "@/contracts/project";
+
+import { ASSET_STATUS_META, type Tone } from "./statusMeta";
+import { CAMERA_MOVE_LABEL, frameState } from "./viewModels";
+
+/** Production view models: the chosen direction becomes a film of playable shots (the Studio). */
+
+export type VideoState =
+  | { kind: "waiting" }
+  | { kind: "rendering" }
+  | { kind: "failed"; assetId: string }
+  | { kind: "ready"; url: string };
+
+export function videoState(shot: ShotView): VideoState {
+  const { video } = shot;
+  if (!video) return { kind: "waiting" };
+  if (video.status === "succeeded" && video.url) return { kind: "ready", url: video.url };
+  if (video.status === "failed") return { kind: "failed", assetId: video.id };
+  return { kind: "rendering" };
+}
+
+/** The chosen direction's shots, in order: the film. */
+export function filmShots(view: WorkspaceView): ShotView[] {
+  return view.directions.find((d) => d.id === view.selectedDirectionId)?.shots ?? [];
+}
+
+export interface ProductionProgress {
+  ready: number;
+  failed: number;
+  inFlight: number;
+  total: number;
+  message: string;
+}
+
+export function productionProgress(view: WorkspaceView): ProductionProgress {
+  const kinds = filmShots(view).map((shot) => videoState(shot).kind);
+  const ready = kinds.filter((kind) => kind === "ready").length;
+  const failed = kinds.filter((kind) => kind === "failed").length;
+  const counts = { ready, failed, inFlight: kinds.length - ready - failed, total: kinds.length };
+  return { ...counts, message: productionMessage(counts) };
+}
+
+function productionMessage({
+  ready,
+  failed,
+  inFlight,
+  total,
+}: Omit<ProductionProgress, "message">) {
+  if (total > 0 && ready === total) return "Your film is ready. Press play to watch it.";
+  const tally = `${String(ready)} of ${String(total)} shots ready`;
+  if (inFlight > 0) {
+    return `Rendering your film: ${tally}${failed > 0 ? `, ${String(failed)} failed` : ""}`;
+  }
+  // Layout-neutral: the shot list sits beside the player on wide screens and below it on phones.
+  const failures =
+    failed === 1
+      ? "1 shot failed and was refunded. Retry it"
+      : `${String(failed)} shots failed and were refunded. Retry them`;
+  return `${tally}. ${failures} from the shot list.`;
+}
+
+export interface FilmShot {
+  id: string;
+  number: number;
+  title: string;
+  description: string;
+  /** Camera move and duration, e.g. "Dolly in · 5s". */
+  recipe: string;
+  durationS: number;
+  /** The storyboard frame the video starts from, shown until the video plays. */
+  posterUrl: string | null;
+  video: VideoState;
+  status: { label: string; tone: Tone };
+  /** A filename for the download link, once the video exists. */
+  downloadName: string | null;
+}
+
+export interface Film {
+  projectId: string;
+  directionName: string;
+  aspectRatio: AspectRatio;
+  /** The owner can retry failed shots; everyone else watches (e.g. the public demo). */
+  canManage: boolean;
+  shots: FilmShot[];
+  progress: ProductionProgress;
+}
+
+const WAITING_STATUS = { label: "Waiting", tone: "muted" } as const;
+
+export function toFilm(view: WorkspaceView): Film {
+  const direction = view.directions.find((d) => d.id === view.selectedDirectionId);
+  return {
+    projectId: view.id,
+    directionName: direction?.name ?? "",
+    aspectRatio: view.aspectRatio,
+    canManage: view.isOwner && !view.isDemo,
+    shots: (direction?.shots ?? []).map((shot, index) => toFilmShot(view.title, shot, index + 1)),
+    progress: productionProgress(view),
+  };
+}
+
+function toFilmShot(filmTitle: string, shot: ShotView, number: number): FilmShot {
+  const frame = frameState(shot);
+  const video = videoState(shot);
+  return {
+    id: shot.id,
+    number,
+    title: shot.title,
+    description: shot.description,
+    recipe: `${CAMERA_MOVE_LABEL[shot.cameraMove]} · ${String(shot.durationS)}s`,
+    durationS: shot.durationS,
+    posterUrl: frame.kind === "ready" ? frame.url : null,
+    video,
+    status: shot.video ? ASSET_STATUS_META[shot.video.status] : WAITING_STATUS,
+    downloadName: video.kind === "ready" ? downloadName(filmTitle, number, video.url) : null,
+  };
+}
+
+/** "the-keeper-shot-2.mp4": the film's title, the shot number and the clip's real extension. */
+export function downloadName(filmTitle: string, shotNumber: number, url: string): string {
+  const slug =
+    filmTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .slice(0, 48)
+      .replace(/^-+|-+$/g, "") || "film";
+  const extension = /\.(mp4|webm|mov)(?=$|[?#])/i.exec(url)?.[1]?.toLowerCase() ?? "mp4";
+  return `${slug}-shot-${String(shotNumber)}.${extension}`;
+}
+
+export interface ProduceReadiness {
+  shotCount: number;
+  /** Shots edited since their frame was drawn: producing uses the frame as it is. */
+  staleCount: number;
+  /** Why production can't start yet, or null when it can. */
+  blocker: string | null;
+}
+
+export function produceReadiness(view: WorkspaceView): ProduceReadiness {
+  const shots = filmShots(view);
+  const frames = shots.map(frameState);
+  const isDrawing = frames.some(
+    (f) => f.kind === "waiting" || f.kind === "drawing" || (f.kind === "ready" && f.isRedrawing),
+  );
+  const failed = frames.filter((f) => f.kind === "failed").length;
+  const blocker = isDrawing
+    ? "Waiting for the storyboard frames to finish."
+    : failed === 1
+      ? "A frame couldn't be drawn. Redraw it before producing."
+      : failed > 1
+        ? `${String(failed)} frames couldn't be drawn. Redraw them before producing.`
+        : null;
+  return { shotCount: shots.length, staleCount: shots.filter((s) => s.frameStale).length, blocker };
+}

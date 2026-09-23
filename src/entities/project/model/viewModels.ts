@@ -61,15 +61,18 @@ export interface BoardProgress {
 
 export function boardProgress(view: WorkspaceView): BoardProgress {
   const shots = view.directions.flatMap((d) => d.shots);
-  const framesReady = shots.filter((s) => frameState(s).kind === "ready").length;
+  const kinds = shots.map((s) => frameState(s).kind);
+  const framesReady = kinds.filter((kind) => kind === "ready").length;
+  const framesFailed = kinds.filter((kind) => kind === "failed").length;
   const framesTotal = shots.length;
 
+  // A failed frame shows its own state on its card, so it doesn't keep the page "drawing".
   const message =
     view.status === "planning"
       ? "The Director is writing three directions…"
       : view.status === "failed"
         ? "The Director couldn't finish this plan."
-        : framesReady < framesTotal
+        : framesReady + framesFailed < framesTotal
           ? `Drawing storyboards: ${String(framesReady)} of ${String(framesTotal)} frames ready`
           : view.selectedDirectionId
             ? "Direction chosen. Refine the shots, then produce."

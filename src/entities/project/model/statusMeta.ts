@@ -15,7 +15,7 @@ export interface StatusMeta {
 export const ASSET_STATUS_META = {
   queued: { label: "Queued", tone: "muted", isTerminal: false },
   submitted: { label: "Starting", tone: "info", isTerminal: false },
-  running: { label: "Drawing", tone: "info", isTerminal: false },
+  running: { label: "Generating", tone: "info", isTerminal: false },
   persisting: { label: "Finishing", tone: "info", isTerminal: false },
   succeeded: { label: "Ready", tone: "success", isTerminal: true },
   failed: { label: "Failed", tone: "danger", isTerminal: true },

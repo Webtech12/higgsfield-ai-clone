@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { CreditsBadge } from "@/features/credits";
+
 /**
- * App-level composition: the header will host the credits badge and the account menu once those
- * features exist (S3, S6). It lives in app/ because features never import each other.
+ * App-level composition: features never import each other, so the header composes them here. The
+ * account menu joins the credits badge in S6.
  */
 export function SiteHeader() {
   return (
@@ -14,6 +16,7 @@ export function SiteHeader() {
         >
           Director
         </Link>
+        <CreditsBadge />
       </div>
     </header>
   );

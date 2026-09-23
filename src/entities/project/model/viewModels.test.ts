@@ -1,48 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { AssetView, ShotView, WorkspaceView } from "@/contracts/project";
-
+import { asset, shot, view } from "./fixtures";
 import { boardProgress, frameState, isSettled } from "./viewModels";
-
-const asset = (status: AssetView["status"], url: string | null = null): AssetView => ({
-  id: `ast_${status}`,
-  kind: "frame",
-  status,
-  version: 1,
-  url,
-  error: null,
-});
-
-const shot = (overrides: Partial<ShotView> = {}): ShotView => ({
-  id: "sht_1",
-  ordinal: 0,
-  title: "Set-up",
-  description: "A lighthouse at dusk",
-  cameraMove: "dolly-in",
-  durationS: 5,
-  lighting: "dusk",
-  mood: "still",
-  frameStale: false,
-  frame: null,
-  frameJob: null,
-  video: null,
-  videoJob: null,
-  ...overrides,
-});
-
-const view = (status: WorkspaceView["status"], shots: ShotView[]): WorkspaceView => ({
-  id: "prj_1",
-  title: "The Keeper",
-  brief: "brief",
-  aspectRatio: "16:9",
-  styles: [],
-  status,
-  version: 1,
-  selectedDirectionId: null,
-  isDemo: false,
-  isOwner: true,
-  directions: [{ id: "dir_1", ordinal: 0, name: "Quiet", tagline: "t", look: "l", shots }],
-});
 
 describe("frameState", () => {
   it("shows a ready frame, flagged while a redraw is in flight", () => {
@@ -79,6 +38,15 @@ describe("isSettled", () => {
     expect(isSettled(view("planned", shots))).toBe(true);
   });
 
+  it("keeps polling while a video renders, and stops when it's done", () => {
+    const frame = asset("succeeded", "/a.svg");
+
+    expect(isSettled(view("producing", [shot({ frame, video: asset("running") })]))).toBe(false);
+    expect(isSettled(view("ready", [shot({ frame, video: asset("succeeded", "/v.mp4") })]))).toBe(
+      true,
+    );
+  });
+
   it("stops when planning failed", () => {
     expect(isSettled(view("failed", []))).toBe(true);
   });
@@ -96,5 +64,13 @@ describe("boardProgress", () => {
       framesTotal: 2,
       message: "Drawing storyboards: 1 of 2 frames ready",
     });
+  });
+
+  it("stops saying 'drawing' once the only missing frame has failed", () => {
+    const shots = [shot({ frame: asset("succeeded", "/a.svg") }), shot({ frame: asset("failed") })];
+
+    expect(boardProgress(view("planned", shots)).message).toBe(
+      "Storyboards ready. Pick the direction you like best.",
+    );
   });
 });
