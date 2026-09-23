@@ -1,6 +1,6 @@
 # ADR-009: Better Auth with guest (anonymous) accounts and a deferred merge
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR-019](./019-module-boundary-corrections.md) (the merge runs as a process; the anonymous user is kept) and [ADR-022](./022-no-custom-domain-yet.md) (Google-only sign-in live)
 - **Date:** 2026-09-23
 - **Related:** [`architecture.md`](../architecture.md) · [`standards.md`](../standards.md)
 

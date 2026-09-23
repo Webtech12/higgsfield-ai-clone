@@ -3,6 +3,8 @@
 > **Status:** current · **Owners:** engineering · **Related:** [`frontend.md`](./frontend.md), [`standards.md`](./standards.md), [`adr/`](./adr/README.md), [`/AGENTS.md`](../AGENTS.md)
 >
 > `AGENTS.md` is the operational source of truth for agents. This document explains the *why* behind it.
+>
+> **Amended 2026-09-23** by [ADR-018](./adr/018-lean-core-for-the-24-hour-build.md) to [ADR-022](./adr/022-no-custom-domain-yet.md): lean core (no outbox, no webhooks), module boundary corrections, OpenAI as the LLM, npm, and no custom domain yet.
 
 ---
 
@@ -34,32 +36,31 @@ One rule follows from that: **every boundary that will matter at scale exists in
 
 ```mermaid
 flowchart LR
-  U["Creator (browser)"] -->|"HTTPS: UI + REST v1 + auth"| APP["Next.js app on Vercel (Node runtime)<br/>UI · API · Better Auth · webhooks · workflow functions"]
+  U["Creator (browser)"] -->|"HTTPS: UI + REST v1 + auth"| APP["Next.js app on Vercel (Node runtime)<br/>UI · API · Better Auth · workflow functions"]
   APP --> DB[("PostgreSQL (Neon)<br/>system of record")]
   APP --> RL[("Upstash Redis<br/>rate limits · idempotency")]
-  APP -->|"events (outbox relay)"| WF["Inngest<br/>durable workflows"]
+  APP -->|"events (sent after commit)"| WF["Inngest<br/>durable workflows"]
   WF -->|"invokes functions"| APP
-  APP -->|"plan / rewrite"| LLM["Anthropic API"]
-  APP -->|"submit jobs"| MP["fal.ai<br/>image + video models"]
-  MP -->|"signed webhooks"| APP
-  APP -->|"persist outputs"| OS[("Cloudflare R2 + CDN")]
+  APP -->|"plan / rewrite"| LLM["OpenAI API"]
+  APP -->|"submit jobs · poll status"| MP["fal.ai<br/>image + video models"]
+  APP -->|"persist outputs"| OS[("Cloudflare R2 (r2.dev)")]
   U -->|"stream media"| OS
-  APP -->|"magic links"| EM["Resend"]
+  APP -.->|"magic links, once a domain exists"| EM["Resend"]
   U -->|"OAuth"| G["Google"]
-  APP --> OBS["Sentry + pino logs"]
+  APP --> OBS["pino logs"]
 ```
 
 | Container | Responsibility | Why |
 |---|---|---|
-| **Next.js app** (Vercel, Node runtime) | UI, REST API, Better Auth handler, webhook ingress, workflow function host | One deployable, zero ops. Workflow code is *invoked by* Inngest, so it isn't bound by request lifetimes ([ADR-002](./adr/002-single-nextjs-app-node-runtime.md)) |
-| **PostgreSQL (Neon)** | All domain data, auth tables, ledger, outbox, inbox | A relational aggregate, and the ledger needs transactions and row locks ([ADR-003](./adr/003-postgres-neon-drizzle.md)) |
-| **Inngest** | Durable steps, retries, `waitForEvent`, concurrency keys, crons | Solves D1/D2 without running any infrastructure |
-| **fal.ai** (behind a port) | Image and image-to-video inference | Many models behind one queue API with webhooks |
-| **Anthropic** (behind a port) | Brief → structured plan; remix rewrites | Reliable structured output via tool use |
-| **Cloudflare R2** | Frames and videos | Zero egress fees, which is decisive for video |
+| **Next.js app** (Vercel, Node runtime) | UI, REST API, Better Auth handler, workflow function host | One deployable, zero ops. Workflow code is *invoked by* Inngest, so it isn't bound by request lifetimes ([ADR-002](./adr/002-single-nextjs-app-node-runtime.md)) |
+| **PostgreSQL (Neon)** | All domain data, auth tables, ledger | A relational aggregate, and the ledger needs transactions and row locks ([ADR-003](./adr/003-postgres-neon-drizzle.md)) |
+| **Inngest** | Durable steps, retries, `step.sleep` polling, concurrency keys, crons | Solves D1/D2 without running any infrastructure |
+| **fal.ai** (behind a port) | Image and image-to-video inference | Many models behind one queue API, polled from the workflow ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)) |
+| **OpenAI** (behind a port) | Brief → structured plan; remix rewrites | Structured outputs, validated again with zod ([ADR-020](./adr/020-openai-llm-provider.md)) |
+| **Cloudflare R2** | Frames and videos | Zero egress fees, which is decisive for video; served from r2.dev until a domain exists ([ADR-022](./adr/022-no-custom-domain-yet.md)) |
 | **Upstash Redis** | Rate limiting, idempotency responses | Serverless-native |
-| **Resend** | Magic-link emails | Simple and reliable |
-| **Sentry + pino** | Errors, traces, structured logs | Correlation IDs on every event |
+| **Resend** | Magic-link emails, once a domain is verified | Simple and reliable |
+| **pino** | Structured logs | Correlation IDs on every event; Sentry is deferred |
 
 ---
 
@@ -71,20 +72,22 @@ flowchart LR
 
 | Module | Owns | Public API (examples) | Depends on |
 |---|---|---|---|
-| **identity** (Auth & Accounts) | Better Auth tables; guest → account merge | `getCurrentUser`, `requireUser`, `mergeGuestAccount` | — |
-| **director** (AI Director) | Director prompts, plan generation/validation, `PromptComposer` | `planProject` | projects |
-| **projects** (Project & Continuity, Gallery) | projects, directions, shots, elements; workspace + gallery read models | `createProject`, `applyPlan`, `updateShot`, `updateElements`, `getWorkspaceView`, `listProjects` | identity |
-| **storyboard** | Frame requests, direction selection | `generateFrames`, `selectDirection` | projects, production, routing |
-| **production** (Generation Engine) | assets, generation_jobs, webhook inbox; generation workflows; stuck-job sweep | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media |
-| **remix** (Remix & Versioning) | Single-shot remix → new asset version | `remixShot` | projects, production, routing, credits, limits |
+| **identity** (Auth & Accounts) | Better Auth tables, `guest_merges` | `getCurrentUser`, `requireUser`, `markGuestMerged` | — |
+| **director** (AI Director) | Director prompts, plan generation/validation, `PromptComposer`, remix rewrites | `planProject`, `composeFramePrompt`, `composeVideoPrompt`, `rewriteShot` | projects |
+| **projects** (Project & Continuity) | projects, directions, shots, elements | `createProject`, `applyPlan`, `selectDirection`, `updateShot`, `updateElements`, `reassignOwner` | identity |
+| **storyboard** | Frame generation and redraws | `generateFrames`, `redrawFrame` | projects, production, routing, director |
+| **production** (Generation Engine) | assets, generation_jobs; generation workflows; stuck-job sweep | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director |
+| **remix** (Remix & Versioning) | Single-shot remix → new asset version | `remixShot` | projects, production, routing, credits, limits, director |
 | **routing** (Smart Select) | Model registry, routing policy, pricing | `selectModel`, `priceOf` | — |
 | **credits** (Credits & Billing) | Append-only ledger | `grant`, `reserve`, `capture`, `release`, `transfer`, `balanceOf` | identity |
-| **limits** (Usage Limits & Abuse) | Rate limits, caps, kill-switch | `assertCanGenerate`, `assertWithinRate` | identity |
+| **limits** (Usage Limits & Abuse) | Rate limits, caps, kill-switch | `assertCanGenerate`, `assertWithinRate`, `recordUsage` | identity |
 | **media** (Storage & Delivery) | Object keys, persistence, delivery URLs | `persistFromUrl`, `urlFor` | — |
 
-Cross-cutting capabilities that are **not** domain modules:
+Cross-cutting code that is **not** a domain module ([ADR-019](./adr/019-module-boundary-corrections.md)):
+- **Processes** live in `server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`). No module depends on a process.
+- **Read queries** live in `server/queries/*`: read-only SQL for the workspace view and the gallery, the only code that reads across module tables.
 - **Provider Integration** lives in `server/integrations/*`: adapters implementing module ports.
-- **Live Status** comes from the `projects` read model plus frontend polling.
+- **Live Status** comes from the workspace read query plus frontend polling.
 - **Playback** is the frontend `features/studio`.
 - **Observability** lives in `server/platform/observability`.
 
@@ -94,8 +97,11 @@ Cross-cutting capabilities that are **not** domain modules:
 flowchart TD
   remix --> production
   remix --> projects
+  remix --> director
   storyboard --> production
   storyboard --> projects
+  storyboard --> director
+  production --> director
   director --> projects
   production --> projects
   production --> credits
@@ -109,6 +115,9 @@ flowchart TD
   projects --> identity
   credits --> identity
   limits --> identity
+  mergeGuest(["process: mergeGuest"]) -.-> identity
+  mergeGuest -.-> projects
+  mergeGuest -.-> credits
 ```
 
 ### 3.3 Inside a module
@@ -124,16 +133,18 @@ server/modules/<module>/
 ```
 
 Supporting code lives outside the modules:
-- `server/integrations/`: vendor adapters (fal, anthropic, r2, upstash, resend, fake-media).
-- `server/platform/`: the DB client, `UnitOfWork`, outbox relay, the Better Auth instance, HTTP wrappers, the Inngest client, env and observability.
+- `server/processes/`: cross-module workflows (`mergeGuest`, `onboarding`) that call module public APIs.
+- `server/queries/`: read-only SQL for the workspace view and gallery.
+- `server/integrations/`: vendor adapters (fal, openai, r2, upstash, resend) and a fake for each port.
+- `server/platform/`: the DB client, `UnitOfWork`, HTTP wrappers, the Inngest client, env and observability. The Better Auth instance and its generated schema live in `identity/infrastructure`.
 - `server/container.ts`: the composition root.
 
 ### 3.4 Module rules
 
 1. Import another module **only** through its `index.ts`.
-2. A module never reads or writes another module's tables.
+2. A module never reads or writes another module's tables. Only `server/queries/` reads across them.
 3. Synchronous cross-module writes in one transaction call public APIs with the shared `UnitOfWork`.
-4. Asynchronous reactions go through **outbox events** ([ADR-006](./adr/006-transactional-outbox.md)).
+4. Asynchronous reactions use `step.sendEvent` inside workflows, or an event sent after commit from request handlers, with a one-minute sweep as the safety net ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)).
 5. No cycles. These rules are enforced by `eslint-plugin-boundaries` ([standards §9](./standards.md#9-enforcement)).
 
 **Why this matters:** each module is a candidate service. `production` together with its integrations is already a coherent "Generation Service" that can be extracted when scale demands it (§14).
@@ -158,21 +169,22 @@ sequenceDiagram
   participant B as Browser (guest)
   participant BA as Better Auth
   participant DB as Postgres
-  participant WF as Inngest
+  participant WF as Inngest (process: mergeGuest)
   B->>BA: sign in (Google / magic link)
   BA->>DB: create or resolve real user, new session
-  BA->>DB: onLinkAccount → INSERT outbox 'identity/guest.linked' {anonId, userId}
+  BA->>DB: onLinkAccount → INSERT guest_merges (anonId, userId, pending)
+  BA->>WF: send 'identity/guest.linked' {anonId, userId}
   BA-->>B: signed in (new session cookie)
-  DB-->>WF: outbox relay publishes event
-  WF->>DB: step "reassign-projects": UPDATE projects SET user_id = userId WHERE user_id = anonId
-  WF->>DB: step "transfer-credits": ledger transfer anon → user (key merge:{anonId}:{userId})
-  WF->>DB: step "grant-signup-bonus" (key grant:signup:{userId}, once per real user)
-  WF->>DB: step "finalize": mark merge complete; delete anonymous user
-  B->>B: gallery shows "Moving your guest work…" until merge completes, then refreshes
+  WF->>DB: step "reassign-projects": projects.reassignOwner(anonId → userId)
+  WF->>DB: step "transfer-credits": credits.transfer (keys merge:{anonId}:{userId}:out / :in)
+  WF->>DB: step "finalize": identity.markGuestMerged (the anonymous user is kept)
+  B->>B: gallery shows "Moving your guest work…" until the merge is done, then refreshes
 ```
 
-- `disableDeleteAnonymousUser: true` is set on the plugin; the workflow deletes the anonymous row only after a successful merge.
-- Every step is idempotent (guarded updates plus unique ledger keys), so Inngest retries are safe.
+- The merge is a **process** (`server/processes/mergeGuest`), not identity's own workflow: it calls the public APIs of identity, projects and credits, so there is no dependency cycle ([ADR-019](./adr/019-module-boundary-corrections.md)).
+- `disableDeleteAnonymousUser: true` is set on the plugin, and the anonymous user is never deleted: its append-only ledger rows reference it.
+- If the event send fails, the one-minute sweep re-sends every `pending` merge. Every step is idempotent (guarded updates plus unique ledger keys), so retries are safe.
+- The sign-up bonus is not part of the merge. The `onboarding` process grants it once per real user (`grant:signup:{userId}`), whether or not they were a guest.
 - `GET /api/v1/me` exposes `pendingMerge: boolean` so the UI can show an honest transitional state.
 
 ### 4.3 Authorisation
@@ -192,11 +204,10 @@ sequenceDiagram
 |---|---|
 | identity | `user` (incl. `is_anonymous`), `session`, `account`, `verification` (Better Auth-generated), `guest_merges` |
 | projects | `projects`, `directions`, `shots` |
-| production | `assets`, `generation_jobs`, `provider_webhook_inbox` |
+| production | `assets`, `generation_jobs` |
 | credits | `credit_ledger` |
 | limits | `usage_daily` |
 | director | `llm_calls` (observability of planning/remix calls) |
-| platform | `outbox` |
 
 ### 5.2 Schema (abridged)
 
@@ -206,8 +217,9 @@ projects (
   id text pk, user_id text not null references "user"(id),
   title text, brief text not null,
   elements jsonb,                        -- {character, location, style}: continuity context
-  intent text,                           -- smart | cinematic | draft
-  status text not null,                  -- planning | planned | producing | ready | failed
+  aspect_ratio text not null,            -- 16:9 | 9:16 | 1:1
+  style_tags text[],                     -- optional style chips from the brief
+  status text not null,                  -- planning | planned | selected | producing | ready | failed
   selected_direction_id text,
   is_demo boolean default false,
   version integer not null default 0,    -- bumped on any change → ETag for polling
@@ -217,13 +229,14 @@ directions ( id text pk, project_id text references projects(id), ordinal smalli
 shots ( id text pk, direction_id text references directions(id), ordinal smallint, title text, description text,
         camera_motion text check (camera_motion in (/* from contracts/enums */)),
         lighting text, mood text, duration_s smallint, prompt text,
+        frame_stale boolean not null default false,          -- edited since its frame was drawn
         current_frame_asset_id text, current_video_asset_id text );
 
 -- production
 assets (
   id text pk, shot_id text references shots(id), kind text check (kind in ('frame','video')),
   version integer not null, parent_asset_id text references assets(id),
-  status text not null, row_version integer not null default 0,      -- optimistic locking
+  status text not null,                                   -- saved with guarded updates (ADR-018)
   storage_key text, meta jsonb, cost_credits integer not null,
   created_at timestamptz default now(),
   unique (shot_id, kind, version)
@@ -235,11 +248,7 @@ generation_jobs (
   input jsonb, error jsonb, cost_usd_estimate numeric(10,4),
   submitted_at timestamptz, completed_at timestamptz
 );
-provider_webhook_inbox (
-  id bigserial pk, provider text, provider_request_id text, payload jsonb,
-  received_at timestamptz default now(), processed_at timestamptz,
-  unique (provider, provider_request_id)
-);
+-- no webhook inbox in v1: the workflow polls provider status (ADR-018)
 
 -- credits
 credit_ledger (
@@ -254,9 +263,9 @@ credit_ledger (
 usage_daily ( day date, scope text, scope_id text, videos integer default 0, spend_usd numeric(10,4) default 0,
               primary key (day, scope, scope_id) );          -- scope: user | global
 
--- platform
-outbox ( id bigserial pk, event_name text not null, payload jsonb not null,
-         created_at timestamptz default now(), published_at timestamptz );
+-- identity (besides the Better Auth tables)
+guest_merges ( anonymous_user_id text pk, user_id text not null, status text not null,  -- pending | done
+               created_at timestamptz default now(), completed_at timestamptz );
 ```
 
 Indexes:
@@ -264,7 +273,7 @@ Indexes:
 - `assets(shot_id, kind, version desc)`
 - `generation_jobs(status, submitted_at)` for the stuck-job sweep
 - `credit_ledger(user_id)`
-- `outbox(published_at) where published_at is null`
+- `guest_merges(status) where status = 'pending'` for the sweep
 
 ### 5.3 Asset state machine
 
@@ -283,7 +292,7 @@ stateDiagram-v2
   succeeded --> [*]
 ```
 
-Transitions come from a data table in `production/domain`. The repository saves with `WHERE id = $1 AND row_version = $2`, so duplicate webhooks and retried steps can never double-apply a transition.
+Transitions come from a data table in `production/domain`. The repository saves with `WHERE id = $1 AND status = $expected`, so a retried step can never double-apply a transition ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)).
 
 ---
 
@@ -293,8 +302,8 @@ Balance = `SUM(amount)` over an **append-only** ledger ([ADR-007](./adr/007-cred
 
 | Moment | Entry | Amount | Idempotency key |
 |---|---|---|---|
-| Guest's first action | `grant` | + guest allowance | `grant:guest:{userId}` |
-| First real sign-in | `grant` | + sign-up bonus | `grant:signup:{userId}` |
+| Guest's first action | `grant` | +40 | `grant:guest:{userId}` |
+| First real sign-in | `grant` | +60 | `grant:signup:{userId}` |
 | Guest merge | `transfer_out` / `transfer_in` | ∓ guest balance | `merge:{anonId}:{userId}:out` / `:in` |
 | Generation requested | `reserve` | − cost | `asset:{id}:reserve` |
 | Generation succeeded | `capture` | 0 (audit marker) | `asset:{id}:capture` |
@@ -302,10 +311,10 @@ Balance = `SUM(amount)` over an **append-only** ledger ([ADR-007](./adr/007-cred
 
 **Reservation is synchronous and transactional.** Within one `UnitOfWork`:
 1. Lock the user's credit account (`SELECT … FOR UPDATE` on a per-user row).
-2. Compute the balance.
+2. Compute the balance, and check and record the video caps (`limits.recordUsage`).
 3. Append `reserve`.
-4. Create the assets.
-5. Write the outbox events.
+4. Create the assets in `queued`.
+5. After commit, send the generation events. The sweep re-sends for any asset still `queued` ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)).
 
 This means concurrent clicks cannot overdraw, and users get an immediate `402` rather than a delayed failure. When payments are added later, a Stripe webhook simply writes `grant` entries.
 
@@ -317,23 +326,23 @@ This means concurrent clicks cannot overdraw, and users get an immediate `402` r
 
 The alternatives were: holding the request open (❌ times out), browser-driven polling of the provider (❌ closing the tab strands work), a cron sweeper (⚠️ slow, hand-rolled), raw queues (⚠️ you hand-build retries and waits), and Temporal (best at large scale, heavy for an MVP). **Inngest** gives step retries, `waitForEvent`, timeouts, concurrency keys, crons and run history with zero infrastructure. Temporal is the named migration target ([ADR-004](./adr/004-durable-workflows-inngest.md)).
 
-### 7.2 Transactional outbox
+### 7.2 Events without an outbox
 
-Use cases write events to `outbox` **in the same transaction** as their state changes. Publishing works in two ways:
-- **Fast path:** after commit, the relay publishes and marks the rows.
-- **Safety net:** an Inngest cron every minute publishes anything unpublished.
+The lean core has no outbox table ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)):
+- **Inside workflows,** functions chain with `step.sendEvent`, which Inngest makes durable.
+- **From request handlers,** the event is sent after the transaction commits. The entity's own status is the durable record: an asset still `queued` or a merge still `pending` after a minute is re-sent by the sweep.
 
-Events can therefore never be lost between commit and publish ([ADR-006](./adr/006-transactional-outbox.md)).
+Consumers are idempotent (guarded updates and unique ledger keys), so a re-sent event is harmless.
 
 ### 7.3 Workflows
 
 | Workflow | Module | Trigger | Steps |
 |---|---|---|---|
-| `project.plan` | director | `project/created` | direct (LLM → zod, one repair retry) → `projects.applyPlan` → `storyboard.generateFrames` |
-| `asset.generate` | production | `asset/generate.requested` | submit (with webhook URL) → `waitForEvent(provider/job.completed, timeout)` → on failure, retry on the fallback model → persist to R2 → finalize (state, capture/release, shot pointer, `project.version++`) |
-| `asset.sweep` | production | cron (5 min) | reconcile jobs stuck in submitted/running with the provider's status API |
-| `identity.mergeGuest` | identity | `identity/guest.linked` | reassign projects → transfer credits → sign-up bonus → finalize + delete anonymous user |
-| `outbox.relay` | platform | cron (1 min) | publish unpublished outbox rows |
+| `project.plan` | director | `project/created` | plan (LLM structured output → zod, one repair retry) → `projects.applyPlan` → `step.sendEvent("project/planned")` |
+| `frames.generate` | storyboard | `project/planned` | compose each frame prompt (via director) → `production.requestGeneration` for the 9 frames |
+| `asset.generate` | production | `asset/generate.requested` | submit → poll the provider's status with `step.sleep` until done or timed out → on failure, retry on the fallback model → persist to R2 → finalize (state, capture/release, shot pointer, `project.version++`) |
+| `sweep` | production + processes | cron (1 min) | re-send events for assets still `queued` and merges still `pending`; fail jobs past their timeout |
+| `mergeGuest` | process | `identity/guest.linked` | reassign projects → transfer credits → mark merged (the anonymous user is kept) |
 
 ### 7.4 Production sequence
 
@@ -346,14 +355,13 @@ sequenceDiagram
   participant P as fal.ai
   participant S as R2
   B->>API: POST /v1/projects/:id/productions (Idempotency-Key)
-  API->>DB: tx: lock credits, reserve, create 3 video assets, outbox events
+  API->>DB: tx: lock credits, record caps, reserve, create 3 queued video assets
+  API->>WF: after commit, send asset/generate.requested ×3
   API-->>B: 202 Accepted
-  DB-->>WF: relay publishes asset/generate.requested ×3
-  WF->>P: submit job (webhook URL)
-  WF-->>WF: waitForEvent provider/job.completed (match request id, timeout 10m)
-  P-->>API: POST /api/webhooks/fal (signed)
-  API->>DB: verify → inbox insert (unique) 
-  API->>WF: emit provider/job.completed
+  WF->>P: submit job
+  loop step.sleep, then check status, until done or timed out
+    WF->>P: GET status
+  end
   WF->>S: persist output
   WF->>DB: asset succeeded, capture credits, bump project.version
   loop every 2s until settled
@@ -364,7 +372,7 @@ sequenceDiagram
 
 **Concurrency control:** `concurrency: [{ key: "model:" + model, limit: N }, { key: "user:" + userId, limit: 3 }]`. This respects provider rate limits and prevents one user from starving others.
 
-**Webhook ingress (inbox pattern):** the handler verifies the signature, inserts into the inbox (duplicates are rejected by a unique constraint), emits an event, and returns 200 within milliseconds ([ADR-005](./adr/005-webhooks-inbox-reconciliation.md)).
+**No inbound webhooks in v1.** Polling keeps local development and the fake provider simple. Webhooks with ED25519/JWKS signature verification are the scale path ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)).
 
 ---
 
@@ -372,16 +380,15 @@ sequenceDiagram
 
 ```ts
 interface MediaProvider {
-  submit(req: GenerationRequest, opts: { webhookUrl: string }): Promise<{ requestId: ProviderRequestId }>;
-  status(requestId: ProviderRequestId): Promise<ProviderStatus>;
-  parseWebhook(raw: Request): Promise<ProviderCompletion>;   // verifies signature
+  submit(req: GenerationRequest): Promise<{ requestId: ProviderRequestId }>;
+  status(requestId: ProviderRequestId): Promise<ProviderStatus>;   // polled by the workflow
 }
 interface LLMProvider {
   structured<T>(o: { system: string; input: string; schema: ZodType<T>; purpose: string }): Promise<T>;
 }
 ```
 
-The **model registry** (in the routing module) records each model's ID, provider, capabilities, credit cost, typical latency, quality tier and fallback order. **Smart Select** is a routing policy over the registry: given a shot's needs and the user's intent, it returns a model plus a human-readable reason for the UI. The same policy drives fallback ([ADR-008](./adr/008-provider-ports-model-registry.md)).
+The **model registry** (in the routing module) records each model's ID, provider, capabilities, credit cost, typical latency, quality tier and fallback order. **Smart Select** is a routing policy over the registry: given a shot's needs (kind, duration, aspect ratio), it returns a model plus a human-readable reason for the UI. The user never picks a model. The same policy drives fallback ([ADR-008](./adr/008-provider-ports-model-registry.md)).
 
 **Image-to-video uses the approved storyboard frame as the first frame**, so what the user approves is what they get ([ADR-017](./adr/017-storyboard-frame-as-first-frame.md)).
 
@@ -402,9 +409,9 @@ REST under `/api/v1`, with contracts as zod schemas in `src/contracts` shared by
 | POST | `/v1/projects/:id/selection` | Select a direction | 200 |
 | POST | `/v1/projects/:id/productions` | Produce the selected direction | `Idempotency-Key` · 202 / 402 / 429 |
 | POST | `/v1/shots/:id/remixes` | Remix one shot | `Idempotency-Key` · 202 |
+| POST | `/v1/shots/:id/frame` | Redraw a shot's frame after edits | free, rate-limited · 202 |
 | POST | `/v1/assets/:id/retries` | Retry a failed asset | 202 |
 | * | `/api/auth/*` | Better Auth | — |
-| POST | `/api/webhooks/fal` | Provider completion | signed, inbox |
 | * | `/api/inngest` | Workflow endpoint | signed by Inngest |
 
 - **Handler shape:** `compose(withErrorHandling, withRequestContext, withUser, withRateLimit, withIdempotency)(parse → useCase.execute → respond)`.
@@ -422,17 +429,17 @@ REST under `/api/v1`, with contracts as zod schemas in `src/contracts` shared by
 | Bot-minted guest accounts | Guest identity created only on the first meaningful action; per-IP rate limit on anonymous sign-in |
 | Session security | Better Auth sessions (httpOnly, Secure, SameSite=Lax); trusted origins configured; CSRF protection on auth routes |
 | Cross-user access | Ownership enforced in every query and command; the demo is read-only |
-| Forged webhooks | Signature verification; invalid requests are rejected and logged |
+| Forged webhooks | None accepted in v1: the workflow polls provider status ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)) |
 | Prompt injection via brief | LLM output is schema-validated and only ever becomes data; brief length capped |
 | Unsafe content | Provider safety checkers enabled; `CONTENT_REJECTED` state with credits released |
 | Secrets | Vercel env only, validated at boot; `.env*` gitignored; secret scanning enabled |
-| Media access | Unguessable keys `u/{userId}/p/{projectId}/s/{shotId}/{assetId}.{ext}`; signed URLs on the scale path |
+| Media access | Public r2.dev bucket with unguessable keys `u/{userId}/p/{projectId}/s/{shotId}/{assetId}.{ext}` ([ADR-022](./adr/022-no-custom-domain-yet.md)); signed URLs on the scale path |
 
 ---
 
 ## 11. Observability and unit economics
 
-- Every log line and Sentry event carries `requestId`, `userId`, `projectId`, `assetId` and `jobId`.
+- Every log line carries `requestId`, `userId`, `projectId`, `assetId` and `jobId`. Sentry is deferred ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)).
 - Inngest run history serves as the operations dashboard, with step-level failures and replay.
 - Cost tracking: `generation_jobs.cost_usd_estimate` plus `llm_calls` token counts give **cost per project** and **cost per successful video**.
 - **Key metrics:**
@@ -447,12 +454,12 @@ REST under `/api/v1`, with contracts as zod schemas in `src/contracts` shared by
 
 ## 12. Testing strategy (summary)
 
-The test pyramid is aligned with the architecture:
-- Domain unit tests.
+The lean test pyramid ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)):
+- Domain unit tests for the invariants (credits, asset lifecycle, direction selection).
 - Use-case tests with in-memory fakes.
-- Shared **contract suites** for every adapter and repository.
-- Integration tests against a real Postgres (Neon branch), covering concurrent credit reservations, the outbox relay and guest-merge idempotency.
-- One Playwright journey using the fake media provider.
+- Shared **contract suites** for the `MediaProvider` and `LLMProvider` implementations.
+- One integration test against a real Postgres (Neon test branch): concurrent credit reservations never overdraw.
+- One Playwright journey using the fake providers.
 
 Details are in [`standards.md` §8](./standards.md#8-testing-strategy).
 
@@ -463,15 +470,15 @@ Details are in [`standards.md` §8](./standards.md#8-testing-strategy).
 | Capability | Built now | Designed / documented |
 |---|---|---|
 | Modular monolith, hexagonal modules, boundary lint | ✅ | Service extraction |
-| Better Auth: guests, Google, magic link, deferred merge | ✅ | Organisations/teams, passkeys |
+| Better Auth: guests, Google, deferred merge (magic link built, hidden live) | ✅ | Organisations/teams, passkeys |
 | Durable workflows, retries, fallback, concurrency keys | ✅ | Temporal migration |
-| Outbox + inbox + reconciliation sweep | ✅ | — |
+| Status polling + one-minute sweep | ✅ | Webhooks with signature verification, outbox + inbox |
 | Credit ledger with reservations and transfers | ✅ | Stripe purchases → `grant` |
-| R2 persistence | ✅ | Signed URLs, multi-region |
+| R2 persistence (r2.dev) | ✅ | Custom domain, signed URLs, multi-region |
 | Caps, rate limits, kill-switch | ✅ | Tiered quotas per plan |
 | Polling with ETag | ✅ | Push updates |
 | Registry + Smart Select | ✅ basic | Health- and cost-aware routing |
-| Tests: domain, use case, contract, integration, e2e | ✅ | Load tests |
+| Tests: invariants, use cases, provider contracts, one integration, one e2e | ✅ | Coverage gate, repository contracts, load tests |
 
 ---
 

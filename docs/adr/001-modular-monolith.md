@@ -1,6 +1,6 @@
 # ADR-001: Modular monolith with hexagonal modules
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR-019](./019-module-boundary-corrections.md) (processes and read queries)
 - **Date:** 2026-09-23
 - **Related:** [`architecture.md`](../architecture.md) · [`standards.md`](../standards.md)
 

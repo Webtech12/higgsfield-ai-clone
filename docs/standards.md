@@ -76,7 +76,6 @@ export class Asset {
 
   get id() { return this.props.id; }
   get status() { return this.props.status; }
-  get version() { return this.props.rowVersion; }      // optimistic concurrency
 
   markSubmitted(requestId: ProviderRequestId) { this.transitionTo("submitted"); this.props.providerRequestId = requestId; }
   markPersisting()                            { this.transitionTo("persisting"); }
@@ -94,7 +93,7 @@ export class Asset {
 }
 ```
 
-The transition table is **data**, so adding a state is an entry, not new branching (open/closed). It's also exhaustively type-checked. Persistence adds a second, database-level guard: the repository saves with `WHERE id = $1 AND row_version = $2` (optimistic locking). Duplicate webhooks or retried workflow steps therefore can't double-apply a transition, whether in memory or in the database.
+The transition table is **data**, so adding a state is an entry, not new branching (open/closed). It's also exhaustively type-checked. Persistence adds a second, database-level guard: the repository saves with `WHERE id = $1 AND status = $expected`, a guarded update ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)). A retried workflow step therefore can't double-apply a transition, whether in memory or in the database.
 
 ### 2.4 Aggregates protect cross-entity rules
 
@@ -119,7 +118,7 @@ selectDirection(directionId: DirectionId): readonly Shot[] {
   if (this.props.selectedDirectionId) throw new DirectionAlreadySelectedError(this.id);
   const direction = this.findDirection(directionId);            // throws if not in this project
   this.props.selectedDirectionId = direction.id;
-  this.props.status = "producing";
+  this.props.status = "selected";   // "producing" starts with ProduceDirection (ADR-019)
   return direction.shots;
 }
 ```
@@ -169,7 +168,7 @@ Each unit has one reason to change:
 export class ProduceDirection {
   constructor(private readonly d: {
     uow: UnitOfWork;        // platform
-    outbox: Outbox;         // platform
+    events: EventBus;       // platform: sends Inngest events
     assets: AssetRepository;// this module's own repository
     projects: ProjectsApi;  // other modules: public-API interfaces only
     credits: CreditsApi;
@@ -178,29 +177,31 @@ export class ProduceDirection {
   }) {}
 
   async execute(cmd: ProduceDirectionCommand): Promise<{ assetIds: AssetId[] }> {
-    await this.d.limits.assertCanGenerate(cmd.userId, { videos: 3 });
+    await this.d.limits.assertCanGenerate(cmd.userId, { videos: 3 });   // fast pre-check: kill-switch, rate
 
     const assets = await this.d.uow.run(async (tx) => {
       // Cross-module writes go through public APIs and share the same transaction.
       const shots = await this.d.projects.startProduction(tx, { projectId: cmd.projectId, userId: cmd.userId });
 
       const created = shots.map((shot) => {
-        const { model } = this.d.routing.selectModel({ kind: "image-to-video", duration: shot.duration, intent: shot.intent });
+        const { model } = this.d.routing.selectModel({ kind: "image-to-video", duration: shot.duration, aspectRatio: shot.aspectRatio });
         return Asset.createVideo(shot.ref, model, this.d.routing.priceOf(model, shot.duration));
       });
 
+      await this.d.limits.recordUsage(tx, cmd.userId, { videos: created.length });                              // caps, same transaction
       await this.d.credits.reserveMany(tx, cmd.userId, created.map((a) => ({ assetId: a.id, cost: a.cost }))); // row lock + ledger
-      await this.d.assets.addMany(tx, created);
-      await this.d.outbox.addMany(tx, created.map((a) => AssetGenerateRequested(a.id)));                     // same transaction
+      await this.d.assets.addMany(tx, created);                                                                 // status: queued
       return created;
     });
 
+    // After commit. If this send fails, the sweep re-sends for assets still queued (ADR-018).
+    await this.d.events.sendMany(assets.map((a) => AssetGenerateRequested(a.id)));
     return { assetIds: assets.map((a) => a.id) };
   }
 }
 ```
 
-The use case depends on **interfaces** of other modules (`ProjectsApi`, `CreditsApi`), not on their classes or tables. Events are written to the **transactional outbox** in the same database transaction and relayed to Inngest, which eliminates the "committed but event never sent" failure mode ([`architecture.md` §7.2](./architecture.md#72-transactional-outbox), [ADR-006](./adr/006-transactional-outbox.md)).
+The use case depends on **interfaces** of other modules (`ProjectsApi`, `CreditsApi`), not on their classes or tables. Events are sent after commit. The assets' own `queued` status is the durable record, and the sweep re-sends any event that was lost ([`architecture.md` §7.2](./architecture.md#72-events-without-an-outbox), [ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)).
 
 ### O — Open/Closed
 
@@ -226,7 +227,6 @@ export class InstrumentedMediaProvider implements MediaProvider {
     }
   }
   status(id: ProviderRequestId) { return this.inner.status(id); }
-  parseWebhook(raw: Request)    { return this.inner.parseWebhook(raw); }
 }
 ```
 
@@ -240,7 +240,7 @@ export function mediaProviderContract(name: string, make: () => MediaProvider) {
   describe(`${name} satisfies MediaProvider`, () => {
     it("returns a request id on submit", /* … */);
     it("reports terminal status for completed jobs", /* … */);
-    it("rejects webhooks with invalid signatures", /* … */);
+    it("reports a timeout as a retryable ProviderFailure", /* … */);
     it("maps vendor failures to ProviderFailure, never raw vendor errors", /* … */);
   });
 }
@@ -250,7 +250,7 @@ mediaProviderContract("FalMediaProvider", () => new FalMediaProvider(testConfig)
 
 A classic LSP violation to avoid is an adapter that throws "unsupported duration." Capabilities are declared in the **registry**, and the routing policy never selects a model for a request it can't serve. Subtypes don't strengthen preconditions.
 
-The same rule applies to repositories: the in-memory repositories used in use-case tests pass the same repository contract suite as the Drizzle ones.
+Repository contract suites are deferred in the lean core ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)). The concurrency integration test covers the repository that holds money.
 
 ### I — Interface Segregation
 
@@ -269,32 +269,36 @@ The same rule applies to repositories: the in-memory repositories used in use-ca
 
 ```ts
 // server/container.ts — the only file that constructs concrete classes
-const db = createDb(env.DATABASE_URL);
+const db = createDb(env.DATABASE_URL);             // node-postgres pool on the pooled URL
 const uow = new DrizzleUnitOfWork(db);
-const outbox = new DrizzleOutbox();
+const events = new InngestEventBus(inngest);
 
-// integrations (adapters), decorated where useful
+// integrations (adapters), decorated where useful; PROVIDERS=fake swaps in the fakes
+const fake = env.PROVIDERS === "fake";
 const media = new InstrumentedMediaProvider(
-  env.MEDIA_PROVIDER === "fake" ? new FakeMediaProvider() : new FalMediaProvider({ apiKey: env.FAL_KEY, webhookSecret: env.FAL_WEBHOOK_SECRET }),
+  fake ? new FakeMediaProvider() : new FalMediaProvider({ apiKey: env.FAL_KEY }),
   metrics, logger,
 );
-const llm = new AnthropicLLMProvider({ apiKey: env.ANTHROPIC_API_KEY, model: env.DIRECTOR_MODEL });
-const storage = new R2Storage(env.r2);
-const rateLimiter = new UpstashRateLimiter(env.upstash);
+const llm = fake ? new FakeLLMProvider() : new OpenAILLMProvider({ apiKey: env.OPENAI_API_KEY, model: env.DIRECTOR_MODEL });
+const storage = fake ? new InMemoryStorage() : new R2Storage(env.r2);
+const rateLimiter = fake ? new InMemoryRateLimiter() : new UpstashRateLimiter(env.upstash);
 
 // modules, built bottom-up along the (acyclic) dependency graph; each factory returns the module's public API
-const identity   = createIdentityModule({ db, outbox });
+const identity   = createIdentityModule({ db, events });
 const routing    = createRoutingModule({ registry: modelRegistry });
 const mediaStore = createMediaModule({ storage });
 const credits    = createCreditsModule({ db });
 const limits     = createLimitsModule({ db, rateLimiter, config: env.limits });
-const projects   = createProjectsModule({ db, outbox });
-const production = createProductionModule({ uow, outbox, media, mediaStore, projects, credits, limits, routing });
-const storyboard = createStoryboardModule({ uow, projects, production, routing });
+const projects   = createProjectsModule({ db });
 const director   = createDirectorModule({ uow, llm, projects });
-const remix      = createRemixModule({ uow, llm, projects, production, routing, credits, limits });
+const production = createProductionModule({ uow, events, media, mediaStore, projects, credits, limits, routing, director });
+const storyboard = createStoryboardModule({ uow, projects, production, routing, director });
+const remix      = createRemixModule({ uow, projects, production, routing, credits, limits, director });
 
-export const modules = { identity, routing, mediaStore, credits, limits, projects, production, storyboard, director, remix } as const;
+// processes coordinate modules through their public APIs (ADR-019)
+const processes  = createProcesses({ identity, projects, credits });
+
+export const modules = { identity, routing, mediaStore, credits, limits, projects, director, production, storyboard, remix } as const;
 ```
 
 - **Handlers and workflow functions may import `modules`** (they're the outer shell). **Use cases and domain code never import the container.** Doing so would be the Service Locator anti-pattern and would hide their dependencies.
@@ -308,10 +312,10 @@ export const modules = { identity, routing, mediaStore, credits, limits, project
 
 | Knowledge | Single home | Consumers |
 |---|---|---|
-| Enums (asset status, camera motion, error codes) | `contracts/enums.ts` | DB check constraints (generated in migrations), zod schemas, LLM tool schema, domain types, UI status maps |
+| Enums (asset status, camera motion, error codes) | `contracts/enums.ts` | DB check constraints (generated in migrations), zod schemas, LLM output schema, domain types, UI status maps |
 | API shapes | `contracts/*.ts` | Route handlers (parse input/output), frontend API client, tests |
 | Models, capabilities, costs, fallbacks | `server/modules/routing/config/modelRegistry.ts` | Routing, pricing, validation, the cost the UI displays (served by the API) |
-| Prompt assembly | `PromptComposer` (director module) | Planning, frames, videos, remix |
+| Prompt assembly | `PromptComposer` (director module) | Planning, frames, videos, remix, all through director's public API |
 | Error code → HTTP status | `server/platform/http/errorMap.ts` (`satisfies Record<DomainErrorCode, number>`) | Every handler, via `withErrorHandling` |
 | Error code → user copy | `shared/lib/apiErrors.ts` | Every UI error state |
 | Retry and timeout policy | `server/platform/config/resilience.ts` | Workflows and adapters |
@@ -353,12 +357,11 @@ Each pattern is used because a specific problem calls for it, never decoratively
 | **Value Object** | `Credits`, `ShotDuration`, branded IDs | Invalid values unrepresentable |
 | **State (table-driven)** | Asset lifecycle | Legal transitions, idempotency |
 | **Repository + Mapper** | Per aggregate | Persistence ignorance in the domain |
-| **Unit of Work** | `DrizzleUnitOfWork` | Atomic multi-aggregate changes (credits + assets + outbox) |
-| **Transactional Outbox** | Event publishing | No lost events between commit and publish |
-| **Inbox** | Provider webhooks | Idempotent, replayable ingestion |
+| **Unit of Work** | `DrizzleUnitOfWork` | Atomic multi-aggregate changes (credits + usage + assets) |
+| **Status as the durable record + sweep** | Events sent after commit | No lost work without an outbox table ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)) |
 | **Idempotency Key** | Money-spending POSTs | No double charges |
 | **Strategy** | `ModelRoutingPolicy`, `PricingPolicy` | Swappable decision logic (Smart Select) |
-| **Adapter** | `FalMediaProvider`, `AnthropicLLMProvider`, `R2Storage` | Translate vendor APIs to our ports |
+| **Adapter** | `FalMediaProvider`, `OpenAILLMProvider`, `R2Storage` | Translate vendor APIs to our ports |
 | **Decorator** | `InstrumentedMediaProvider`, HTTP wrappers | Cross-cutting concerns without modification |
 | **Factory** | `Asset.createVideo`, adapter selection in the composition root | Controlled construction, valid initial state |
 | **Composition Root** | `server/container.ts` | Explicit wiring in one place |
@@ -376,7 +379,7 @@ Each pattern is used because a specific problem calls for it, never decoratively
 - **Law of Demeter:** use cases talk to aggregates, not to their internals; components receive view models, not raw aggregates.
 - **Composition over inheritance:** decorators, strategies, hooks and compound components.
 - **Immutability by default:** value objects, DTOs, view models and React state are immutable. Entity mutation is encapsulated and persisted through the unit of work.
-- **Fail fast at boundaries:** env validated at boot; every HTTP body, webhook, LLM output and API response parsed with zod.
+- **Fail fast at boundaries:** env validated at boot; every HTTP body, provider response, LLM output and API response parsed with zod.
 - **Make illegal states unrepresentable:** branded IDs, value objects, discriminated unions, exhaustive maps.
 - **12-factor config:** all config comes from env, validated once. The same build runs locally (fake provider), in preview and in production.
 - **Defence in depth for invariants:** the domain enforces them, and database constraints (unique keys, check constraints, foreign keys) enforce them again.
@@ -404,12 +407,12 @@ Each pattern is used because a specific problem calls for it, never decoratively
 
 | Level | Target | Tools | Notes |
 |---|---|---|---|
-| **Domain unit** | Entities, value objects, policies, state table | Vitest | The fastest and most numerous tests. Coverage gate ~90% on `server/modules/*/domain` only |
-| **Use case** | Application classes | Vitest + in-memory repos + `FakeMediaProvider` + fake clock | Business flows without I/O: reserve → fail → release, remix lineage, caps |
-| **Contract** | Every adapter and repository implementation | Shared suites (§3 L) | Enforces substitutability |
-| **Integration** | Drizzle repos, UoW, outbox, row locking | Real Postgres (a Neon branch or Testcontainers) | Proves the concurrency guarantees: two parallel reserves can't overdraw; the outbox relay publishes exactly once; the guest merge is idempotent |
+| **Domain unit** | Invariants: `CreditAccount`, the `Asset` state table, `Project` selection, pricing and routing policies | Vitest | The fastest and most numerous tests. The ~90% coverage gate is deferred ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)) |
+| **Use case** | Application classes | Vitest + in-memory repos + fake providers + fake clock | Business flows without I/O: reserve → fail → release, remix lineage, caps |
+| **Contract** | `MediaProvider` and `LLMProvider` implementations | Shared suites (§3 L) | Enforces substitutability |
+| **Integration** | Credit reservation under concurrency | Real Postgres (Neon test branch) | Two parallel reserves can't overdraw |
 | **Frontend** | View models, hooks, key components | Vitest + RTL + MSW | Polling stop, optimistic rollback, error-state mapping |
-| **End-to-end** | One critical journey | Playwright, `MEDIA_PROVIDER=fake` | Brief → board → produce → remix one shot → playback |
+| **End-to-end** | One critical journey | Playwright, `PROVIDERS=fake` | Brief → board → produce → remix one shot → playback |
 
 ---
 
@@ -419,7 +422,7 @@ Each pattern is used because a specific problem calls for it, never decoratively
 |---|---|
 | Layer boundaries (backend + frontend) | `eslint-plugin-boundaries` element types: `domain`, `application`, `ports`, `adapters`, `delivery`, `feature`, `entity`, `shared`, `contracts`, each with an allowed-dependency matrix |
 | Module boundaries | `eslint-plugin-boundaries`: another module is importable only via `server/modules/<m>/index.ts`; no cycles (plus `import/no-cycle`) |
-| Vendor isolation | `no-restricted-imports`: `@fal-ai/*`, `@anthropic-ai/*`, `@aws-sdk/*`, `@upstash/*`, `resend` only under `server/integrations/**`; `drizzle-orm` only under `**/infrastructure/**` and `server/platform/db/**`; `better-auth` only under `server/modules/identity/**`, `server/platform/auth/**` and `features/auth/**` |
+| Vendor isolation | `no-restricted-imports`: `@fal-ai/*`, `openai`, `@aws-sdk/*`, `@upstash/*`, `resend` only under `server/integrations/**`; `drizzle-orm` only under `**/infrastructure/**`, `server/platform/db/**` and `server/queries/**`; `better-auth` only under `server/modules/identity/**` and `features/auth/**` |
 | No container in inner layers | `no-restricted-imports` of `server/container` from `server/modules/**/domain/**` and `server/modules/**/application/**` |
 | Client/server separation | `import "server-only"` in `server/**`; boundary lint |
 | Type safety | `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`; `@typescript-eslint/strict-type-checked`; `no-explicit-any: error`; `no-floating-promises: error` |
@@ -456,8 +459,8 @@ The operational rules for coding agents live in [`/AGENTS.md`](../AGENTS.md), wh
 
 ## 12. Time impact and how to protect it
 
-The rich domain model, contract suites, outbox and handler wrappers add roughly 2 hours on top of the architecture plan. They also make the agent's output far more predictable, because every new feature follows the same shape. To keep the 24-hour window safe:
+The assignment is judged on **speed** (how much working product ships), **product judgement** (what was built first and what was left out) and **UX/UI** ([`assignment.md`](./assignment.md)). Architecture is not a judging criterion, so ceremony that protects nobody at MVP scale is deferred ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)). To keep the window safe:
 
-1. Build `domain/`, `ports/`, the fakes and the contract suites **first** (Phase 2). Everything after that is filling in known shapes.
-2. Do all UI work against `MEDIA_PROVIDER=fake`, and switch to real providers only for integration checkpoints.
-3. If you fall behind, cut *features* (per the execution plan's cut list), **never** the money path's correctness or the layer boundaries. Those are what this role is being assessed on.
+1. Build in vertical slices ([`plan.md`](./plan.md)) and deploy at the end of each one, so there is always a working live link.
+2. Do all UI work against `PROVIDERS=fake`, and switch to real providers only for integration checkpoints.
+3. If you fall behind, cut *features* from the bottom of the plan's cut list, **never** the money path's correctness (no double charges, no overdrafts) or the module boundaries (they keep the agent's output predictable).

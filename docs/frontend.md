@@ -240,7 +240,7 @@ export const assetStatusMeta = {
 | View models, status maps, formatters | Vitest | Pure-function unit tests: fast, many |
 | Hooks + key components | Vitest + React Testing Library + **MSW** (mocks the API at the network level) | Polling stops when settled; optimistic remix + rollback; error codes render the right designed state |
 | Auth hooks + components | Vitest + RTL + MSW | `useEnsureGuest` only signs in anonymously on submit; `MergeNotice` waits for `pendingMerge=false`; sign-out clears the cache |
-| Critical journeys | **Playwright** against a build with `MEDIA_PROVIDER=fake` | (1) Brief → board → produce → remix one shot → playback. (2) Guest work → sign in → the same projects remain visible. Runs in CI in seconds at zero cost |
+| Critical journeys | **Playwright** against a build with `PROVIDERS=fake` | (1) Brief → board → produce → remix one shot → playback. (2) If time allows: guest work → magic-link sign-in (fake email sender) → the same projects remain visible. Runs in CI in seconds at zero cost |
 
 ---
 
@@ -254,14 +254,14 @@ The frontend half of the identity module ([ADR-009](./adr/009-better-auth-guest-
 - **One source of "who am I":** `useMe()` wraps `GET /api/v1/me` (user, `isGuest`, credits, caps, `pendingMerge`) in TanStack Query. Components never read the Better Auth session directly.
 
 **Where sign-in is offered**
-- In the `AccountMenu` in the top bar (Google or email link).
+- In the `AccountMenu` in the top bar (Google; email link too once a domain is verified, [ADR-022](./adr/022-no-custom-domain-yet.md)).
 - In a `GuestBanner` on the gallery ("Sign in to keep your projects across devices").
 - **At the moment of value:** when a guest hits a cap, the `LIMIT_REACHED` / `INSUFFICIENT_CREDITS` error state offers sign-in along with the sign-up bonus.
 - Before downloading a final video (optional; configured in one place).
 
 **Flows**
 - **Google:** `authClient.signIn.social({ provider: "google", callbackURL })` returns the user to the exact page they came from.
-- **Magic link:** `SignInDialog` asks for an email and shows a "Check your inbox" state. The link returns to `callbackURL`.
+- **Magic link** (shown only when `MAGIC_LINK_ENABLED`): `SignInDialog` asks for an email and shows a "Check your inbox" state, telling guests to open the link in this same browser so their work moves with them. The link returns to `callbackURL`.
 - **After sign-in:** `useMe()` is invalidated. If `pendingMerge` is true, `MergeNotice` shows "Moving your guest work…" and the gallery shows skeletons, polling `me` until the merge completes. Then all project queries are invalidated and a toast confirms the result. The UI never claims the work has moved before the server confirms it.
 - **Sign-out:** clears the query cache (`queryClient.clear()`) so no data from the previous user remains on screen.
 

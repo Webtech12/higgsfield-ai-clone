@@ -1,6 +1,6 @@
 # ADR-008: Provider ports, a model registry and Smart Select
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR-020](./020-openai-llm-provider.md) (OpenAI replaces Anthropic behind the `LLMProvider` port)
 - **Date:** 2026-09-23
 - **Related:** [`architecture.md`](../architecture.md) · [`standards.md`](../standards.md)
 

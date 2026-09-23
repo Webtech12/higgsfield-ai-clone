@@ -1,6 +1,6 @@
 # ADR-002: A single Next.js app on the Node.js runtime
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR-021](./021-toolchain-npm-and-node-versions.md) (npm; Node 24 deployed, Node 26 locally)
 - **Date:** 2026-09-23
 - **Related:** [`architecture.md`](../architecture.md) · [`standards.md`](../standards.md)
 

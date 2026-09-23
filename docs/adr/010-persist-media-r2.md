@@ -1,6 +1,6 @@
 # ADR-010: Persist generated media to Cloudflare R2
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR-022](./022-no-custom-domain-yet.md) (served from r2.dev until a domain exists)
 - **Date:** 2026-09-23
 - **Related:** [`architecture.md`](../architecture.md) · [`standards.md`](../standards.md)
 

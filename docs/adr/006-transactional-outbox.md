@@ -1,6 +1,6 @@
 # ADR-006: Transactional outbox for events
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-018](./018-lean-core-for-the-24-hour-build.md)
 - **Date:** 2026-09-23
 - **Related:** [`architecture.md`](../architecture.md) · [`standards.md`](../standards.md)
 

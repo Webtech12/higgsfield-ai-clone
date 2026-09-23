@@ -1,6 +1,6 @@
 # ADR-011: Immutable, versioned assets separate from job attempts
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by [ADR-018](./018-lean-core-for-the-24-hour-build.md) (guarded status updates replace row-version locking)
 - **Date:** 2026-09-23
 - **Related:** [`architecture.md`](../architecture.md) · [`standards.md`](../standards.md)
 

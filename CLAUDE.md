@@ -8,16 +8,19 @@ If you cannot see its contents, stop and read `AGENTS.md` before doing anything 
 
 ## Claude Code specifics
 
-- **Plan first.** For any task touching more than 2 files, use plan mode (or write a short plan listing
-  files, responsibilities and tests) and wait for approval before editing.
+- **Plan per slice.** Follow `docs/plan.md`. Post each slice's plan (files, responsibilities, tests) as a
+  chat message, not in plan mode: plan-mode plans and approvals never reach `.agent-logs/`. Wait for the
+  user's typed approval, then build the whole slice. Ask any decision that belongs to the user through
+  AskUserQuestion popups.
 - **Stay in scope.** Do exactly the task asked. If you notice something else worth changing, list it
   at the end as a suggestion instead of doing it.
-- **Verify, don't assume.** After changes, run `pnpm lint && pnpm typecheck && pnpm test`, and
-  `pnpm test:integration` when touching credits, production, identity merge or repositories.
+- **Verify, don't assume.** After changes, run `npm run lint && npm run typecheck && npm test`, and
+  `npm run test:integration` when touching the credits money path or a repository's SQL.
   Report the results honestly, including failures.
-- **Library APIs.** For Better Auth, Inngest, fal.ai, Drizzle, TanStack Query and Next.js, check the
-  installed version's docs/types instead of relying on memory. Never invent fal model IDs; use only
-  the IDs in the routing module's registry.
+- **Library APIs.** For Better Auth, Inngest, fal.ai, OpenAI, Drizzle, TanStack Query and Next.js 16, check
+  the installed version's docs/types instead of relying on memory. Never invent fal or OpenAI model IDs; use
+  only the IDs in the routing module's registry and `DIRECTOR_MODEL`.
 - **Git.** One logical change per commit, Conventional Commit messages, and `.agent-logs/` staged in
-  every commit. Never commit secrets or `.env*` files. Never force-push.
+  every commit. Never let a formatter or linter touch `.agent-logs/` or `.claude/`. Never commit secrets
+  or `.env*` files, and never ask for keys in chat: prompts are logged publicly. Never force-push.
 - **Summaries.** End each task with: what changed (files), how it was verified, and any follow-ups.
