@@ -8,3 +8,22 @@
 
 # Local state of the gstack headless browser (research and QA runs)
 .gstack/
+
+# Dependencies and build output (from create-next-app)
+/node_modules
+/.next/
+/out/
+/build
+/coverage
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+*.pem
+npm-debug.log*
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
