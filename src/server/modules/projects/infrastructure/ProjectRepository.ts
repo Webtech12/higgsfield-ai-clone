@@ -2,7 +2,7 @@ import "server-only";
 
 import { asc, eq, sql } from "drizzle-orm";
 
-import type { Database } from "@/server/platform/db";
+import { executor, type Database, type Tx as UnitOfWorkTx } from "@/server/platform/db";
 
 import { Project, type ProjectProps } from "../domain/Project";
 import { directions, projects, shots } from "./schema";
@@ -36,14 +36,21 @@ export class ProjectRepository {
    * Loads the project with its row locked, applies `change`, and saves, all in one transaction.
    * Frame workflows finish concurrently; without the lock, one save would erase another's pointer.
    */
-  async update<T>(id: string, change: (project: Project) => T): Promise<T | null> {
-    return this.db.transaction(async (tx) => {
+  async update<T>(
+    id: string,
+    change: (project: Project) => T,
+    outer?: UnitOfWorkTx,
+  ): Promise<T | null> {
+    const run = async (tx: Tx) => {
       const project = await this.loadWith(tx, id, true);
       if (!project) return null;
       const result = change(project);
       await this.save(tx, project);
       return result;
-    });
+    };
+    // Inside a caller's unit of work (e.g. the money path) the lock is held until it commits.
+    if (outer) return run(executor(this.db, outer) as Tx);
+    return this.db.transaction(run);
   }
 
   private async loadWith(db: Database | Tx, id: string, lock: boolean): Promise<Project | null> {

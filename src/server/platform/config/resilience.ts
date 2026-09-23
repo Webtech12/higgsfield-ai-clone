@@ -8,3 +8,10 @@ export const GENERATION_POLICY = {
   maxPolls: 120,
   workflowRetries: 3,
 } as const;
+
+/** The once-a-minute sweep that re-sends lost generation events (ADR-018). */
+export const SWEEP_POLICY = {
+  cron: "* * * * *",
+  /** An asset still queued this long after its last update has lost its event. */
+  queuedGraceMs: 60_000,
+} as const;

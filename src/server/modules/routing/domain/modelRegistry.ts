@@ -8,6 +8,8 @@ export interface ModelEntry {
   kind: AssetKind;
   /** What the user pays, in credits (AGENTS.md §1): frames are free, a video shot costs 10. */
   creditCost: number;
+  /** What the provider charges us, in US cents, for the global daily kill-switch (ADR-016). */
+  providerCostCents: number;
   /** Shown in the UI as the reason Smart Select picked it. */
   reason: string;
 }
@@ -22,6 +24,7 @@ export const MODEL_REGISTRY: readonly ModelEntry[] = [
     provider: "fake",
     kind: "frame",
     creditCost: 0,
+    providerCostCents: 0,
     reason: "Instant placeholder frames for development",
   },
   {
@@ -29,6 +32,7 @@ export const MODEL_REGISTRY: readonly ModelEntry[] = [
     provider: "fake",
     kind: "video",
     creditCost: 10,
+    providerCostCents: 0,
     reason: "Placeholder video for development",
   },
 ];

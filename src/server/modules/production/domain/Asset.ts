@@ -46,11 +46,13 @@ export interface AssetProps {
   url: string | null;
   error: string | null;
   costCredits: number;
+  /** 1 for the first try; a user retry after a final failure is attempt 2, and pays again. */
+  attempt: number;
 }
 
 export type NewAsset = Omit<
   AssetProps,
-  "status" | "providerRequestId" | "url" | "error" | "parentAssetId"
+  "status" | "providerRequestId" | "url" | "error" | "parentAssetId" | "attempt"
 > & {
   parentAssetId?: string | null;
 };
@@ -75,9 +77,14 @@ export class Asset {
         providerRequestId: null,
         url: null,
         error: null,
+        attempt: 1,
       },
       null,
     );
+  }
+
+  get attempt(): number {
+    return this.props.attempt;
   }
 
   static rehydrate(props: AssetProps): Asset {
@@ -123,6 +130,7 @@ export class Asset {
     this.transitionTo("queued");
     this.props.error = null;
     this.props.providerRequestId = null;
+    this.props.attempt += 1;
   }
 
   toSnapshot(): Readonly<AssetProps> {

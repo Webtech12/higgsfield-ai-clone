@@ -52,14 +52,19 @@ export class FakeMediaProvider implements MediaProvider {
   }
 }
 
+/** Pre-recorded placeholder clips per aspect ratio (scripts/record-fake-clips.mjs). */
+const CLIPS_PER_RATIO = 3;
+
 function fakeMediaUrl(ticket: FakeTicket): string {
+  if (ticket.kind === "video") {
+    const clip = (hashString(ticket.seed) % CLIPS_PER_RATIO) + 1;
+    return `/fake-media/clip-${ticket.ratio.replace(":", "x")}-${String(clip)}.webm`;
+  }
   const params = new URLSearchParams({
     seed: ticket.seed,
     ratio: ticket.ratio,
     title: ticket.title,
     subtitle: ticket.subtitle,
   });
-  return ticket.kind === "frame"
-    ? `/api/fake-media/frame?${params.toString()}`
-    : `/fake-media/video.mp4?${params.toString()}`;
+  return `/api/fake-media/frame?${params.toString()}`;
 }

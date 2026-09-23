@@ -8,20 +8,26 @@ export type { ModelEntry, ProviderName };
 export function createRoutingModule(deps: { provider: ProviderName }) {
   const byId = new Map(MODEL_REGISTRY.map((model) => [model.id, model]));
 
+  /** The first registered model of the active provider that can do this job (fallback order). */
+  function selectModel(need: { kind: AssetKind }): ModelEntry {
+    const model = MODEL_REGISTRY.find((m) => m.provider === deps.provider && m.kind === need.kind);
+    if (!model) throw new Error(`No ${deps.provider} model registered for ${need.kind}`);
+    return model;
+  }
+
+  function find(modelId: string): ModelEntry {
+    const model = byId.get(modelId);
+    if (!model) throw new Error(`Unknown model ${modelId}`);
+    return model;
+  }
+
   return {
-    /** The first registered model of the active provider that can do this job (fallback order). */
-    selectModel(need: { kind: AssetKind }): ModelEntry {
-      const model = MODEL_REGISTRY.find(
-        (m) => m.provider === deps.provider && m.kind === need.kind,
-      );
-      if (!model) throw new Error(`No ${deps.provider} model registered for ${need.kind}`);
-      return model;
-    },
-    priceOf(modelId: string): number {
-      const model = byId.get(modelId);
-      if (!model) throw new Error(`Unknown model ${modelId}`);
-      return model.creditCost;
-    },
+    selectModel,
+    priceOf: (modelId: string): number => find(modelId).creditCost,
+    /** What a job costs right now, for the price on the button (AGENTS.md §1). */
+    priceFor: (need: { kind: AssetKind }): number => selectModel(need).creditCost,
+    /** Estimated provider cost in US cents, counted against the daily spend cap (ADR-016). */
+    estimateCents: (modelId: string): number => find(modelId).providerCostCents,
   };
 }
 

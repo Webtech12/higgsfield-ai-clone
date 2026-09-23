@@ -138,6 +138,10 @@ export class Project {
   }
 
   updateShot(shotId: string, patch: ShotPatch): ShotProps {
+    if (this.props.status !== "selected") {
+      // Once production starts, changes go through a remix, which keeps every version (S5).
+      throw new ShotNotEditableError("Shots are locked once production starts");
+    }
     const shot = this.findShotInSelectedDirection(shotId);
     const changesPicture =
       (patch.description !== undefined && patch.description !== shot.description) ||
@@ -154,8 +158,34 @@ export class Project {
     shot.frameStale = false;
   }
 
+  /** Produce the chosen direction: allowed once, from `selected`. Returns the shots to render. */
+  startProduction(): readonly ShotProps[] {
+    if (this.props.status !== "selected") {
+      throw new ProjectNotReadyError(
+        this.props.status === "producing" || this.props.status === "ready"
+          ? "This film is already in production"
+          : "Choose a direction before producing",
+      );
+    }
+    this.props.status = "producing";
+    return this.selectedShots();
+  }
+
+  /** A video finished: it becomes the shot's current version; the film is ready once all have one. */
   setCurrentVideo(shotId: string, assetId: string): void {
     this.findShot(shotId).currentVideoAssetId = assetId;
+    const shots = this.selectedShots();
+    if (
+      this.props.status === "producing" &&
+      shots.length > 0 &&
+      shots.every((s) => s.currentVideoAssetId !== null)
+    ) {
+      this.props.status = "ready";
+    }
+  }
+
+  private selectedShots(): ShotProps[] {
+    return this.props.directions.find((d) => d.id === this.props.selectedDirectionId)?.shots ?? [];
   }
 
   reassignOwner(fromUserId: string, toUserId: string): void {

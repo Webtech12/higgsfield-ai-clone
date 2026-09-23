@@ -66,6 +66,7 @@ describe("Asset", () => {
 
     expect(asset.status).toBe("queued");
     expect(asset.toSnapshot().error).toBeNull();
+    expect(asset.attempt).toBe(2);
   });
 
   it("remembers the persisted status for guarded updates", () => {

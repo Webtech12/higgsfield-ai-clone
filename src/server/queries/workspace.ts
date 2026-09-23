@@ -5,11 +5,12 @@ import { and, asc, desc, eq, max, or } from "drizzle-orm";
 import type { AssetKind, AssetView, ShotView, WorkspaceView } from "@/contracts/project";
 import { assets } from "@/server/modules/production/infrastructure/schema";
 import { directions, projects, shots } from "@/server/modules/projects/infrastructure/schema";
-import type { Database } from "@/server/platform/db";
+import type { Reader } from "@/server/platform/db";
 
 /**
  * The workspace read model (CQS, ADR-019): one flat view of a project for the Board and Studio.
- * The only code allowed to read across module tables; it never writes.
+ * The only code allowed to read across module tables; it never writes. Callers read the version and
+ * the view inside one `readSnapshot`, so the ETag always describes the body it's sent with.
  */
 
 const canView = (projectId: string, viewerId: string | null) =>
@@ -22,7 +23,7 @@ const canView = (projectId: string, viewerId: string | null) =>
 
 /** A cheap fingerprint for ETags: changes whenever the project or any of its assets change. */
 export async function getWorkspaceVersion(
-  db: Database,
+  db: Reader,
   projectId: string,
   viewerId: string | null,
 ): Promise<string | null> {
@@ -79,7 +80,7 @@ function toShotView(s: typeof shots.$inferSelect, projectAssets: AssetRow[]): Sh
 }
 
 export async function getWorkspaceView(
-  db: Database,
+  db: Reader,
   projectId: string,
   viewerId: string | null,
 ): Promise<WorkspaceView | null> {

@@ -109,6 +109,12 @@ export type WorkspaceView = z.infer<typeof WorkspaceView>;
 export const CreateProjectResponse = z.object({ projectId: z.string() });
 export type CreateProjectResponse = z.infer<typeof CreateProjectResponse>;
 
+export const ProduceResponse = z.object({ assetIds: z.array(z.string()) });
+export type ProduceResponse = z.infer<typeof ProduceResponse>;
+
+export const RetryResponse = z.object({ assetId: z.string() });
+export type RetryResponse = z.infer<typeof RetryResponse>;
+
 export const SelectDirectionInput = z.object({ directionId: z.string().min(1) });
 export type SelectDirectionInput = z.infer<typeof SelectDirectionInput>;
 

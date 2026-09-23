@@ -136,4 +136,37 @@ describe("Project", () => {
     expect(after?.frameStale).toBe(false);
     expect(after?.currentFrameAssetId).toBe("ast_9");
   });
+
+  it("produces the chosen direction once, then locks shot edits", () => {
+    const project = plannedProject();
+    const chosen = directionId(project, 2);
+    project.selectDirection(chosen.id);
+
+    const shots = project.startProduction();
+
+    expect(project.status).toBe("producing");
+    expect(shots.map((s) => s.id)).toEqual(chosen.shots.map((s) => s.id));
+    expect(() => project.startProduction()).toThrow(ProjectNotReadyError);
+    const first = chosen.shots[0];
+    if (!first) throw new Error("fixture has 3 shots");
+    expect(() => project.updateShot(first.id, { durationS: 8 })).toThrow(ShotNotEditableError);
+  });
+
+  it("cannot produce before a direction is chosen", () => {
+    expect(() => plannedProject().startProduction()).toThrow(ProjectNotReadyError);
+  });
+
+  it("becomes ready when every shot in the chosen direction has a video", () => {
+    const project = plannedProject();
+    const chosen = directionId(project, 0);
+    project.selectDirection(chosen.id);
+    project.startProduction();
+
+    chosen.shots.forEach((shot, index) => {
+      expect(project.status).toBe("producing");
+      project.setCurrentVideo(shot.id, `ast_v${String(index)}`);
+    });
+
+    expect(project.status).toBe("ready");
+  });
 });
