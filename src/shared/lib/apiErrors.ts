@@ -11,8 +11,14 @@ export const ERROR_COPY = {
   RATE_LIMITED: "You're going a little fast. Wait a moment and try again.",
   PROJECT_NOT_READY: "The Director is still working on this. Try again in a moment.",
   DIRECTION_ALREADY_SELECTED: "You've already chosen a direction for this film.",
-  SHOT_NOT_EDITABLE: "Choose this direction first, then edit its shots.",
+  SHOT_NOT_EDITABLE: "Shots can be edited in your chosen direction, before production starts.",
   ILLEGAL_TRANSITION: "That change is no longer possible. Refresh to see the latest state.",
+  // Viewer-neutral on purpose: the guest sign-in offer (more credits, a higher limit) is a button
+  // shown next to these messages, not a promise inside them (AGENTS.md §5).
+  INSUFFICIENT_CREDITS: "You don't have enough credits for this.",
+  LIMIT_REACHED: "You've reached today's video limit. Come back tomorrow for more.",
+  DAILY_BUDGET_REACHED:
+    "Director has used today's generation budget. Explore the demo film, or try again tomorrow.",
   INTERNAL: "Something went wrong on our side. Please try again.",
 } satisfies Record<ErrorCode, string>;
 

@@ -36,6 +36,7 @@ export const assets = pgTable(
     url: text(),
     error: text(),
     costCredits: integer().notNull().default(0),
+    attempt: integer().notNull().default(1),
     meta: jsonb().$type<AssetMeta>().notNull(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),

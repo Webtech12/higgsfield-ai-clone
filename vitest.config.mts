@@ -24,11 +24,14 @@ export default defineConfig({
         },
       },
       {
-        // Real Postgres on the Neon test branch (DATABASE_URL_TEST); see AGENTS.md §9.
+        // Real Postgres at DATABASE_URL_TEST: Docker locally, the CI service container, or the Neon
+        // test branch (AGENTS.md §9). Files run one at a time: they share and truncate tables.
         extends: true,
         test: {
           name: "integration",
           include: ["tests/integration/**/*.test.ts"],
+          globalSetup: ["tests/integration/globalSetup.ts"],
+          fileParallelism: false,
           testTimeout: 30_000,
         },
       },

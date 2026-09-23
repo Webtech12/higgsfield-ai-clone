@@ -5,19 +5,22 @@ import { Pool } from "pg";
 
 import { getEnv } from "../env";
 
+/** Carries its pool, so a script or test that owns the connection can close it (`$client.end()`). */
+export type Database = NodePgDatabase & { $client: Pool };
+
 /**
  * node-postgres over Neon's pooled URL, not the Neon HTTP driver: the money path needs interactive
- * transactions with SELECT … FOR UPDATE (AGENTS.md §2). One small pool per server instance.
+ * transactions with SELECT … FOR UPDATE (AGENTS.md §2). TypeScript keys stay camelCase; Postgres
+ * columns are snake_case.
  */
-let db: NodePgDatabase | undefined;
-
-export function getDb(): NodePgDatabase {
-  if (!db) {
-    const pool = new Pool({ connectionString: getEnv().DATABASE_URL, max: 5 });
-    // TypeScript keys stay camelCase; Postgres columns are snake_case.
-    db = drizzle({ client: pool, casing: "snake_case" });
-  }
-  return db;
+export function createDb(connectionString: string): Database {
+  return drizzle({ client: new Pool({ connectionString, max: 5 }), casing: "snake_case" });
 }
 
-export type Database = NodePgDatabase;
+let db: Database | undefined;
+
+/** The app's database, one small pool per server instance. */
+export function getDb(): Database {
+  db ??= createDb(getEnv().DATABASE_URL);
+  return db;
+}
