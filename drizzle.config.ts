@@ -6,6 +6,8 @@ export default defineConfig({
   dialect: "postgresql",
   schema: "./src/server/modules/*/infrastructure/schema.ts",
   out: "./drizzle",
+  // Matches the app client: camelCase in TypeScript, snake_case in Postgres.
+  casing: "snake_case",
   dbCredentials: {
     url: process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL ?? "",
   },

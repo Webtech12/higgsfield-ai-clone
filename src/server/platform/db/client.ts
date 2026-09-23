@@ -14,7 +14,10 @@ let db: NodePgDatabase | undefined;
 export function getDb(): NodePgDatabase {
   if (!db) {
     const pool = new Pool({ connectionString: getEnv().DATABASE_URL, max: 5 });
-    db = drizzle({ client: pool });
+    // TypeScript keys stay camelCase; Postgres columns are snake_case.
+    db = drizzle({ client: pool, casing: "snake_case" });
   }
   return db;
 }
+
+export type Database = NodePgDatabase;
