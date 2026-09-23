@@ -1,0 +1,65 @@
+import type { GenerationRequest, MediaProvider, ProviderStatus } from "@/server/modules/production";
+
+import { hashString } from "./hash";
+
+/** Everything the fake needs is encoded in the request id, so it works across server instances. */
+interface FakeTicket {
+  kind: GenerationRequest["kind"];
+  seed: string;
+  ratio: GenerationRequest["aspectRatio"];
+  title: string;
+  subtitle: string;
+  createdAt: number;
+  fail: boolean;
+}
+
+const LATENCY_MS = { frame: [2500, 5000], video: [9000, 14000] } as const;
+
+/** A prompt containing this marker fails, so failure states can be exercised end to end. */
+export const FAKE_FAILURE_MARKER = "FAIL_ME";
+
+const encode = (ticket: FakeTicket) => Buffer.from(JSON.stringify(ticket)).toString("base64url");
+const decode = (requestId: string) =>
+  JSON.parse(Buffer.from(requestId, "base64url").toString("utf8")) as FakeTicket;
+
+export class FakeMediaProvider implements MediaProvider {
+  constructor(private readonly now: () => number = Date.now) {}
+
+  submit(request: GenerationRequest): Promise<{ requestId: string }> {
+    const ticket: FakeTicket = {
+      kind: request.kind,
+      seed: request.seed,
+      ratio: request.aspectRatio,
+      title: request.label?.title ?? "Untitled shot",
+      subtitle: request.label?.subtitle ?? "",
+      createdAt: this.now(),
+      fail: request.prompt.includes(FAKE_FAILURE_MARKER),
+    };
+    return Promise.resolve({ requestId: encode(ticket) });
+  }
+
+  status(requestId: string): Promise<ProviderStatus> {
+    const ticket = decode(requestId);
+    const [min, max] = LATENCY_MS[ticket.kind];
+    const latency = min + (hashString(ticket.seed) % (max - min));
+    const elapsed = this.now() - ticket.createdAt;
+
+    if (elapsed < latency / 3) return Promise.resolve({ state: "queued" });
+    if (elapsed < latency) return Promise.resolve({ state: "running" });
+    if (ticket.fail)
+      return Promise.resolve({ state: "failed", reason: "The fake provider was asked to fail" });
+    return Promise.resolve({ state: "completed", outputUrl: fakeMediaUrl(ticket) });
+  }
+}
+
+function fakeMediaUrl(ticket: FakeTicket): string {
+  const params = new URLSearchParams({
+    seed: ticket.seed,
+    ratio: ticket.ratio,
+    title: ticket.title,
+    subtitle: ticket.subtitle,
+  });
+  return ticket.kind === "frame"
+    ? `/api/fake-media/frame?${params.toString()}`
+    : `/fake-media/video.mp4?${params.toString()}`;
+}

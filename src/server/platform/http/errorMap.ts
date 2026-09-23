@@ -1,0 +1,15 @@
+import type { ErrorCode } from "@/contracts/errors";
+
+/** Error code → HTTP status, in one place (AGENTS.md §8). Exhaustive by type. */
+export const ERROR_STATUS = {
+  VALIDATION_FAILED: 400,
+  UNAUTHENTICATED: 401,
+  FORBIDDEN: 403,
+  NOT_FOUND: 404,
+  RATE_LIMITED: 429,
+  PROJECT_NOT_READY: 409,
+  DIRECTION_ALREADY_SELECTED: 409,
+  SHOT_NOT_EDITABLE: 409,
+  ILLEGAL_TRANSITION: 409,
+  INTERNAL: 500,
+} satisfies Record<ErrorCode, number>;
