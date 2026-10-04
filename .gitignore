@@ -8,6 +8,12 @@
 # Local state of the gstack headless browser (research and QA runs)
 .gstack/
 
+# Real people's photos and release details (ADR-024): seeded from here, never committed.
+/talent/
+
+# Model bake-off outputs: downloaded media and the local comparison page.
+/bakeoff/
+
 # Dependencies and build output (from create-next-app)
 /node_modules
 /.next/
