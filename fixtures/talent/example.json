@@ -1,0 +1,22 @@
+{
+  "talent": [
+    {
+      "slug": "firstname-lastname",
+      "name": "Firstname Lastname",
+      "tagline": "One line brands will see, e.g. Skincare and wellness creator",
+      "bio": "Two or three sentences in their own voice: what they make, who follows them, what they're known for.",
+      "tags": ["beauty", "wellness", "lifestyle"],
+      "photos": [
+        { "file": "firstname-1.jpg", "alt": "Firstname smiling, head and shoulders, front view" },
+        { "file": "firstname-2.jpg", "alt": "Firstname in a three-quarter view" },
+        { "file": "firstname-3.jpg", "alt": "Firstname standing, full body" }
+      ],
+      "consent": {
+        "signedOn": "2026-10-01",
+        "scope": "Their photos shown in Director; AI-generated ads with their likeness; brands may download and publish those ads.",
+        "reference": "Where the signed release is kept, e.g. Signed release FL-2026-01, stored offline"
+      },
+      "active": true
+    }
+  ]
+}

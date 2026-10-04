@@ -1,7 +1,8 @@
-// storyboard: orders the frames a direction is judged by, and redraws edited shots.
+// storyboard: orders the frames a concept is judged by, and redraws edited shots.
 import type { DirectorApi } from "@/server/modules/director";
 import type { ProductionApi } from "@/server/modules/production";
 import type { ProjectsApi } from "@/server/modules/projects";
+import type { TalentApi } from "@/server/modules/talent";
 
 import { GenerateFrames } from "./application/GenerateFrames";
 import { createFramesGenerateWorkflow } from "./workflows/framesGenerate";
@@ -10,6 +11,7 @@ export function createStoryboardModule(deps: {
   projects: ProjectsApi;
   director: DirectorApi;
   production: ProductionApi;
+  talent: TalentApi;
 }) {
   const generateFrames = new GenerateFrames(deps);
   const run = generateFrames.execute.bind(generateFrames);

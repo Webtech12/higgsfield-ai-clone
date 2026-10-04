@@ -10,7 +10,8 @@ import { StartProduction } from "./application/StartProduction";
 import { UpdateShot } from "./application/UpdateShot";
 import { ProjectRepository } from "./infrastructure/ProjectRepository";
 
-export type { ShotContext } from "./application/GetGenerationContext";
+export type { PlanningInput, ShotContext } from "./application/GetGenerationContext";
+export type { ProjectReference } from "./domain/Project";
 export {
   DirectionAlreadySelectedError,
   ProjectNotReadyError,

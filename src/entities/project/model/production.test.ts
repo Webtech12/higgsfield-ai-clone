@@ -74,7 +74,11 @@ describe("toFilm", () => {
       ]),
     );
 
-    expect(film).toMatchObject({ projectId: "prj_1", directionName: "Quiet", canManage: true });
+    expect(film).toMatchObject({
+      projectId: "prj_1",
+      directionName: "Real Talk",
+      canManage: true,
+    });
     expect(film.shots[0]).toMatchObject({
       number: 1,
       recipe: "Dolly in · 5s",
@@ -83,7 +87,7 @@ describe("toFilm", () => {
       // Same-origin, so the `download` attribute works; the route redirects to the stored file.
       download: {
         href: "/api/v1/projects/prj_1/assets/ast_video_succeeded/download",
-        filename: "the-keeper-shot-1.webm",
+        filename: "luma-ugc-testimonial-shot-1.webm",
       },
     });
     expect(film.shots[1]).toMatchObject({

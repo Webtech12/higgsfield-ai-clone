@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { AdBriefFields } from "@/contracts/ad";
 import type { DirectorPlan } from "@/contracts/plan";
 import { NotFoundError } from "@/server/platform/errors";
 
@@ -13,6 +14,7 @@ import {
 const shot = (title: string) => ({
   title,
   description: `${title} description`,
+  motion: `${title} motion`,
   cameraMove: "dolly-in" as const,
   durationS: 5 as const,
   lighting: "tungsten",
@@ -23,26 +25,45 @@ const direction = (name: string) => ({
   name,
   tagline: `${name} tagline`,
   look: `${name} look`,
+  hook: `${name} hook`,
+  headline: `${name} headline`,
+  cta: "Shop now",
+  musicBrief: "Warm indie pop, 104 BPM",
   shots: [shot(`${name} 1`), shot(`${name} 2`), shot(`${name} 3`)],
 });
 
 const plan: DirectorPlan = {
-  title: "The Keeper",
-  elements: { character: "a keeper", location: "a lighthouse", style: "grainy 16mm" },
-  directions: [direction("Quiet"), direction("Bold"), direction("Dream")],
+  title: "LUMA · UGC testimonial",
+  elements: { character: "the talent", location: "a bright bathroom", style: "clean" },
+  directions: [direction("Real Talk"), direction("Studio Gloss"), direction("Golden Hour")],
+};
+
+const ad: AdBriefFields = {
+  template: "ugc-testimonial",
+  productName: "LUMA Vitamin C Serum",
+  benefit: "Brighter, more even skin in two weeks",
+  audience: "",
+  message: "",
+  cta: "",
+  moods: [],
+  sceneDirection: "",
 };
 
 let counter = 0;
 const newId = (prefix: string) => `${prefix}_${String(++counter)}`;
 
-const plannedProject = () => {
-  const project = Project.create({
-    id: "prj_1",
+const newProject = (id = "prj_1") =>
+  Project.create({
+    id,
     userId: "usr_1",
-    brief: "A lighthouse keeper finds a message from her future self",
-    aspectRatio: "16:9",
-    styles: [],
+    ad,
+    talentId: "tal_1",
+    references: [{ uploadId: "upl_1", url: "https://cdn/luma.jpg", role: "product" }],
+    aspectRatio: "9:16",
   });
+
+const plannedProject = () => {
+  const project = newProject();
   project.applyPlan(plan, newId);
   return project;
 };
@@ -54,14 +75,31 @@ const directionId = (project: Project, index: number) => {
 };
 
 describe("Project", () => {
-  it("applies a plan: 3 directions of 3 shots, status planned", () => {
+  it("starts from the ad brief, with a one-line summary for headers", () => {
+    const snapshot = newProject().toSnapshot();
+
+    expect(snapshot.status).toBe("planning");
+    expect(snapshot.brief).toBe(
+      "UGC testimonial for LUMA Vitamin C Serum. Brighter, more even skin in two weeks",
+    );
+    expect(snapshot.talentId).toBe("tal_1");
+    expect(snapshot.references).toHaveLength(1);
+  });
+
+  it("applies a plan: 3 concepts of 3 shots with their ad fields, status planned", () => {
     const project = plannedProject();
     const snapshot = project.toSnapshot();
 
     expect(project.status).toBe("planned");
-    expect(snapshot.title).toBe("The Keeper");
+    expect(snapshot.title).toBe("LUMA · UGC testimonial");
     expect(snapshot.directions).toHaveLength(3);
     expect(snapshot.directions.every((d) => d.shots.length === 3)).toBe(true);
+    expect(snapshot.directions[0]).toMatchObject({
+      hook: "Real Talk hook",
+      headline: "Real Talk headline",
+      cta: "Shop now",
+    });
+    expect(snapshot.directions[0]?.shots[0]?.motion).toBe("Real Talk 1 motion");
   });
 
   it("refuses a second plan", () => {
@@ -87,15 +125,7 @@ describe("Project", () => {
   });
 
   it("cannot select before planning is done", () => {
-    const project = Project.create({
-      id: "prj_2",
-      userId: "usr_1",
-      brief: "brief",
-      aspectRatio: "1:1",
-      styles: [],
-    });
-
-    expect(() => project.selectDirection("dir_x")).toThrow(ProjectNotReadyError);
+    expect(() => newProject("prj_2").selectDirection("dir_x")).toThrow(ProjectNotReadyError);
   });
 
   it("rejects a direction from another project", () => {

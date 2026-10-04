@@ -1,3 +1,4 @@
+export { listTalent } from "./talent";
 export {
   getDemoProjectId,
   getDownloadableShot,

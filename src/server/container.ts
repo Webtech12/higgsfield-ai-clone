@@ -18,10 +18,12 @@ import { createProductionModule, type MediaProvider } from "@/server/modules/pro
 import { createProjectsModule } from "@/server/modules/projects";
 import { createRoutingModule, type ProviderName } from "@/server/modules/routing";
 import { createStoryboardModule } from "@/server/modules/storyboard";
+import { createTalentModule } from "@/server/modules/talent";
 import { LLM_POLICY, STORAGE_POLICY } from "@/server/platform/config/resilience";
 import { createUnitOfWork, getDb } from "@/server/platform/db";
 import { getEnv, type Env } from "@/server/platform/env";
 import { newId } from "@/server/platform/ids";
+import { createCreateAd } from "@/server/processes/createAd";
 import { createOnboarding } from "@/server/processes/onboarding";
 
 /**
@@ -34,7 +36,7 @@ function build() {
   const db = getDb();
   const uow = createUnitOfWork(db);
   const routing = createRoutingModule({ provider: adapter.provider });
-  const media = createMediaModule({ storage: adapter.storage });
+  const media = createMediaModule({ db, storage: adapter.storage, newId });
   const credits = createCreditsModule({ db });
   const limits = createLimitsModule({
     db,
@@ -42,7 +44,8 @@ function build() {
     policy: capPolicy(env),
   });
   const projects = createProjectsModule({ db, newId });
-  const director = createDirectorModule({ llm: adapter.llm, projects });
+  const talent = createTalentModule({ db });
+  const director = createDirectorModule({ llm: adapter.llm, projects, talent });
   const production = createProductionModule({
     db,
     uow,
@@ -59,8 +62,8 @@ function build() {
     projects,
     director: director.api,
     production: production.api,
+    talent,
   });
-  const onboarding = createOnboarding({ credits });
 
   return {
     db,
@@ -68,7 +71,9 @@ function build() {
     projects,
     credits,
     limits,
-    onboarding,
+    media,
+    onboarding: createOnboarding({ credits }),
+    createAd: createCreateAd({ media, talent, projects }),
     director: director.api,
     production: production.api,
     storyboard: storyboard.api,

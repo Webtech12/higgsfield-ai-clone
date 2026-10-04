@@ -1,3 +1,4 @@
+import { AD_TEMPLATES, type AdBriefFields, type ReferenceRole } from "@/contracts/ad";
 import type { AspectRatio, StyleTag } from "@/contracts/brief";
 import type { DirectorPlan, Elements } from "@/contracts/plan";
 import type { CameraMove, ProjectStatus, ShotDuration } from "@/contracts/project";
@@ -15,11 +16,20 @@ export class ShotNotEditableError extends DomainError {
   readonly code = "SHOT_NOT_EDITABLE";
 }
 
+/** A brand photo attached to the brief, with the URL it had when it was attached. */
+export interface ProjectReference {
+  uploadId: string;
+  url: string;
+  role: ReferenceRole;
+}
+
 export interface ShotProps {
   id: string;
   ordinal: number;
   title: string;
   description: string;
+  /** What happens during the shot; null for films planned before ads. */
+  motion: string | null;
   cameraMove: CameraMove;
   durationS: ShotDuration;
   lighting: string;
@@ -35,6 +45,11 @@ export interface DirectionProps {
   name: string;
   tagline: string;
   look: string;
+  // The concept's ad fields (ADR-024); null for films planned before ads.
+  hook: string | null;
+  headline: string | null;
+  cta: string | null;
+  musicBrief: string | null;
   shots: ShotProps[];
 }
 
@@ -43,6 +58,10 @@ export interface ProjectProps {
   userId: string;
   title: string;
   brief: string;
+  /** The structured ad brief; null for films made before ads. */
+  ad: AdBriefFields | null;
+  talentId: string | null;
+  references: ProjectReference[];
   aspectRatio: AspectRatio;
   styles: StyleTag[];
   status: ProjectStatus;
@@ -62,16 +81,20 @@ export type ShotPatch = Partial<Pick<ShotProps, "description" | "cameraMove" | "
 export class Project {
   private constructor(private props: ProjectProps) {}
 
+  /** A new ad, waiting for the Director's plan (ADR-024). */
   static create(input: {
     id: string;
     userId: string;
-    brief: string;
+    ad: AdBriefFields;
+    talentId: string | null;
+    references: ProjectReference[];
     aspectRatio: AspectRatio;
-    styles: StyleTag[];
   }): Project {
     return new Project({
       ...input,
-      title: "Untitled film",
+      title: "Untitled ad",
+      brief: summarise(input.ad),
+      styles: [],
       status: "planning",
       selectedDirectionId: null,
       isDemo: false,
@@ -108,6 +131,10 @@ export class Project {
       name: direction.name,
       tagline: direction.tagline,
       look: direction.look,
+      hook: direction.hook,
+      headline: direction.headline,
+      cta: direction.cta,
+      musicBrief: direction.musicBrief,
       shots: direction.shots.map((shot, s) => ({
         id: newId("sht"),
         ordinal: s,
@@ -219,4 +246,9 @@ export class Project {
     }
     return shot;
   }
+}
+
+/** The one-line summary headers and the gallery show: "UGC testimonial for LUMA. Brighter skin…" */
+function summarise(ad: AdBriefFields): string {
+  return `${AD_TEMPLATES[ad.template].label} for ${ad.productName}. ${ad.benefit}`;
 }

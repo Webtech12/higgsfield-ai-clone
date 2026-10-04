@@ -3,8 +3,10 @@ import "server-only";
 import { and, asc, desc, eq, max, or } from "drizzle-orm";
 
 import type { AssetKind, AssetView, ShotView, WorkspaceView } from "@/contracts/project";
+import type { CastView } from "@/contracts/talent";
 import { assets } from "@/server/modules/production/infrastructure/schema";
 import { directions, projects, shots } from "@/server/modules/projects/infrastructure/schema";
+import { talents } from "@/server/modules/talent/infrastructure/schema";
 import type { Reader } from "@/server/platform/db";
 
 /**
@@ -103,6 +105,7 @@ function toShotView(s: typeof shots.$inferSelect, projectAssets: AssetRow[]): Sh
     ordinal: s.ordinal,
     title: s.title,
     description: s.description,
+    motion: s.motion,
     cameraMove: s.cameraMove,
     durationS: s.durationS,
     lighting: s.lighting,
@@ -123,7 +126,7 @@ export async function getWorkspaceView(
   const [project] = await db.select().from(projects).where(canView(projectId, viewerId));
   if (!project) return null;
 
-  const [directionRows, shotRows, assetRows] = await Promise.all([
+  const [directionRows, shotRows, assetRows, cast] = await Promise.all([
     db
       .select()
       .from(directions)
@@ -135,12 +138,17 @@ export async function getWorkspaceView(
       .from(assets)
       .where(eq(assets.projectId, projectId))
       .orderBy(asc(assets.shotId), desc(assets.version)),
+    project.talentId ? getCast(db, project.talentId) : Promise.resolve(null),
   ]);
 
   return {
     id: project.id,
     title: project.title,
     brief: project.brief,
+    ad: project.ad,
+    cast,
+    // The photos' URLs and roles only: upload ids never leave the server.
+    references: project.references.map(({ url, role }) => ({ url, role })),
     aspectRatio: project.aspectRatio,
     styles: project.styles,
     status: project.status,
@@ -154,7 +162,30 @@ export async function getWorkspaceView(
       name: d.name,
       tagline: d.tagline,
       look: d.look,
+      hook: d.hook,
+      headline: d.headline,
+      cta: d.cta,
+      musicBrief: d.musicBrief,
       shots: shotRows.filter((s) => s.directionId === d.id).map((s) => toShotView(s, assetRows)),
     })),
   };
+}
+
+/**
+ * The talent an ad was cast with, as its header shows them. Shown even if they've since been
+ * deactivated: the ad already exists; deactivation only stops new generations (ADR-024).
+ */
+async function getCast(db: Reader, talentId: string): Promise<CastView | null> {
+  const [row] = await db
+    .select({
+      id: talents.id,
+      name: talents.name,
+      tagline: talents.tagline,
+      photos: talents.photos,
+    })
+    .from(talents)
+    .where(eq(talents.id, talentId));
+  const photo = row?.photos[0];
+  if (!row || !photo) return null;
+  return { id: row.id, name: row.name, tagline: row.tagline, photoUrl: photo.url };
 }

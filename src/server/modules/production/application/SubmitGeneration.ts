@@ -18,6 +18,7 @@ export class SubmitGeneration {
       seed: a.id,
       label: a.meta.label,
       ...(a.sourceUrl ? { imageUrl: a.sourceUrl } : {}),
+      ...(a.meta.referenceUrls?.length ? { referenceImageUrls: a.meta.referenceUrls } : {}),
       ...(a.meta.durationS === undefined ? {} : { durationS: a.meta.durationS }),
     });
     asset.markSubmitted(requestId);

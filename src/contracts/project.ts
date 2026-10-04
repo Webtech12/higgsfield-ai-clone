@@ -1,6 +1,8 @@
 import { z } from "zod";
 
+import { AdBriefFields, ReferenceRole } from "./ad";
 import { AspectRatio, StyleTag } from "./brief";
+import { CastView } from "./talent";
 
 /** Higgsfield-style named camera moves. The Director picks one per shot; the user can change it. */
 export const CAMERA_MOVES = [
@@ -65,6 +67,8 @@ export const ShotView = z.object({
   ordinal: z.number().int(),
   title: z.string(),
   description: z.string(),
+  /** What happens during the shot; null for films planned before ads (ADR-024). */
+  motion: z.string().nullable(),
   cameraMove: CameraMove,
   durationS: ShotDuration,
   lighting: z.string(),
@@ -79,20 +83,33 @@ export const ShotView = z.object({
 });
 export type ShotView = z.infer<typeof ShotView>;
 
+/** A concept. The ad fields are null for films planned before ads (ADR-024). */
 export const DirectionView = z.object({
   id: z.string(),
   ordinal: z.number().int(),
   name: z.string(),
   tagline: z.string(),
   look: z.string(),
+  hook: z.string().nullable(),
+  headline: z.string().nullable(),
+  cta: z.string().nullable(),
+  musicBrief: z.string().nullable(),
   shots: z.array(ShotView),
 });
 export type DirectionView = z.infer<typeof DirectionView>;
 
+export const ReferenceView = z.object({ url: z.string(), role: ReferenceRole });
+export type ReferenceView = z.infer<typeof ReferenceView>;
+
 export const WorkspaceView = z.object({
   id: z.string(),
   title: z.string(),
+  /** A one-line summary of the brief, for headers and the gallery. */
   brief: z.string(),
+  /** The full ad brief; null for films made before ads. */
+  ad: AdBriefFields.nullable(),
+  cast: CastView.nullable(),
+  references: z.array(ReferenceView),
   aspectRatio: AspectRatio,
   styles: z.array(StyleTag),
   status: ProjectStatus,
@@ -121,6 +138,7 @@ export function shotFilename(filmTitle: string, shotNumber: number, url: string)
 
 // --- Commands --------------------------------------------------------------------------------
 
+// POST /api/v1/projects takes the ad brief: AdBriefInput in ./ad.
 export const CreateProjectResponse = z.object({ projectId: z.string() });
 export type CreateProjectResponse = z.infer<typeof CreateProjectResponse>;
 

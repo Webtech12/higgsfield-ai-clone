@@ -1,0 +1,64 @@
+{
+  "talent": [
+    {
+      "slug": "ava-moreno",
+      "name": "Ava Moreno",
+      "tagline": "Skincare and wellness creator",
+      "bio": "Fictional placeholder. Calm, honest reviews of the products in her morning routine, shot in natural light.",
+      "tags": ["beauty", "wellness", "routines"],
+      "consent": {
+        "signedOn": "2026-10-04",
+        "scope": "Fictional placeholder for development and tests: not a real person.",
+        "reference": "fixtures/talent/fake.json"
+      }
+    },
+    {
+      "slug": "kai-okafor",
+      "name": "Kai Okafor",
+      "tagline": "Running coach and outdoor athlete",
+      "bio": "Fictional placeholder. High-energy training content: early runs, trail days and recovery.",
+      "tags": ["fitness", "sport", "outdoors"],
+      "consent": {
+        "signedOn": "2026-10-04",
+        "scope": "Fictional placeholder for development and tests: not a real person.",
+        "reference": "fixtures/talent/fake.json"
+      }
+    },
+    {
+      "slug": "mei-tanaka",
+      "name": "Mei Tanaka",
+      "tagline": "Home cook and food storyteller",
+      "bio": "Fictional placeholder. Warm, unhurried kitchen moments and weeknight recipes for busy families.",
+      "tags": ["food", "home", "family"],
+      "consent": {
+        "signedOn": "2026-10-04",
+        "scope": "Fictional placeholder for development and tests: not a real person.",
+        "reference": "fixtures/talent/fake.json"
+      }
+    },
+    {
+      "slug": "leo-brandt",
+      "name": "Leo Brandt",
+      "tagline": "Tech reviewer with a dry wit",
+      "bio": "Fictional placeholder. Desk setups, gadgets and productivity tools, reviewed without the hype.",
+      "tags": ["tech", "gadgets", "productivity"],
+      "consent": {
+        "signedOn": "2026-10-04",
+        "scope": "Fictional placeholder for development and tests: not a real person.",
+        "reference": "fixtures/talent/fake.json"
+      }
+    },
+    {
+      "slug": "sofia-reyes",
+      "name": "Sofia Reyes",
+      "tagline": "Travel and style creator",
+      "bio": "Fictional placeholder. City breaks, packing lists and outfits that work from airport to dinner.",
+      "tags": ["travel", "fashion", "lifestyle"],
+      "consent": {
+        "signedOn": "2026-10-04",
+        "scope": "Fictional placeholder for development and tests: not a real person.",
+        "reference": "fixtures/talent/fake.json"
+      }
+    }
+  ]
+}

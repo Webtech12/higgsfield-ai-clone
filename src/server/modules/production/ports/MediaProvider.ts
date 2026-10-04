@@ -10,6 +10,8 @@ export interface GenerationRequest {
   seed: string;
   /** Image-to-video: the storyboard frame used as the first frame (ADR-017). */
   imageUrl?: string;
+  /** Frames: the talent's, product's and scene's photos, in the order the prompt names them. */
+  referenceImageUrls?: string[];
   durationS?: number;
   /** Short human labels, used only by the fake provider to draw placeholder media. */
   label?: { title: string; subtitle: string };

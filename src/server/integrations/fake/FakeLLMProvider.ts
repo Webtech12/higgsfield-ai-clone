@@ -1,6 +1,11 @@
-import { BriefInput } from "@/contracts/brief";
-import type { LLMProvider, StructuredRequest } from "@/server/modules/director";
+import {
+  CoachRequest,
+  PlanningRequest,
+  type LLMProvider,
+  type StructuredRequest,
+} from "@/server/modules/director";
 
+import { buildFakeCoach } from "./fakeCoach";
 import { buildFakePlan } from "./fakePlan";
 
 /**
@@ -9,10 +14,22 @@ import { buildFakePlan } from "./fakePlan";
  */
 export class FakeLLMProvider implements LLMProvider {
   structured<T>(request: StructuredRequest<T>): Promise<T> {
-    if (request.purpose !== "plan") {
-      return Promise.reject(new Error(`FakeLLMProvider has no fixture for "${request.purpose}"`));
+    try {
+      return Promise.resolve(request.schema.parse(this.answer(request)));
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
-    const brief = BriefInput.parse(JSON.parse(request.input));
-    return Promise.resolve(request.schema.parse(buildFakePlan(brief)));
+  }
+
+  private answer(request: StructuredRequest<unknown>): unknown {
+    const input: unknown = JSON.parse(request.input);
+    switch (request.purpose) {
+      case "plan":
+        return buildFakePlan(PlanningRequest.parse(input));
+      case "coach":
+        return buildFakeCoach(CoachRequest.parse(input));
+      case "rewrite":
+        throw new Error('FakeLLMProvider has no fixture for "rewrite"');
+    }
   }
 }

@@ -11,9 +11,12 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 
+import type { AdBriefFields } from "@/contracts/ad";
 import type { AspectRatio, StyleTag } from "@/contracts/brief";
 import type { Elements } from "@/contracts/plan";
 import type { CameraMove, ProjectStatus, ShotDuration } from "@/contracts/project";
+
+import type { ProjectReference } from "../domain/Project";
 
 // Tables owned by the projects module. Column names are snake_case via the shared `casing` setting.
 
@@ -24,7 +27,20 @@ export const projects = pgTable(
     // No FK into identity's tables: modules never reach into each other's schema (AGENTS.md §3).
     userId: text().notNull(),
     title: text().notNull(),
+    /** A one-line summary of the brief; the full ad brief is in `ad`. */
     brief: text().notNull(),
+    /** The structured ad brief (ADR-024); null for films made before ads. */
+    ad: jsonb().$type<AdBriefFields>(),
+    // A plain id: the talent module owns the roster (AGENTS.md §3).
+    talentId: text(),
+    /**
+     * The brand photos the brief uses, in order, with the URL each had when it was attached. Named
+     * explicitly: REFERENCES is a reserved word, which would trap anyone writing raw SQL.
+     */
+    references: jsonb("photo_references")
+      .$type<ProjectReference[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     aspectRatio: text().$type<AspectRatio>().notNull(),
     styles: text()
       .array()
@@ -60,6 +76,11 @@ export const directions = pgTable(
     name: text().notNull(),
     tagline: text().notNull(),
     look: text().notNull(),
+    // The concept's ad fields (ADR-024); null for films planned before ads.
+    hook: text(),
+    headline: text(),
+    cta: text(),
+    musicBrief: text(),
   },
   (t) => [index("directions_project_idx").on(t.projectId, t.ordinal)],
 );
@@ -77,6 +98,8 @@ export const shots = pgTable(
     ordinal: smallint().notNull(),
     title: text().notNull(),
     description: text().notNull(),
+    /** What happens during the shot, for the video model; null for films planned before ads. */
+    motion: text(),
     cameraMove: text().$type<CameraMove>().notNull(),
     durationS: smallint().$type<ShotDuration>().notNull(),
     lighting: text().notNull(),

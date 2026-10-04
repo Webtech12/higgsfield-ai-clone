@@ -15,6 +15,8 @@ export interface GenerationOrder {
   durationS?: number;
   /** Video only: the storyboard frame to start from (ADR-017). */
   sourceUrl?: string;
+  /** Frames: reference photos, in the order the prompt names them (ADR-024). */
+  referenceUrls?: string[];
   parentAssetId?: string;
   label: { title: string; subtitle: string };
 }
@@ -34,7 +36,8 @@ export class RequestGeneration {
   ) {}
 
   async execute(order: GenerationOrder): Promise<{ assetId: string }> {
-    const model = this.d.routing.selectModel({ kind: order.kind });
+    const references = order.referenceUrls ?? [];
+    const model = this.d.routing.selectModel({ kind: order.kind, references: references.length });
     const costCredits = this.d.routing.priceOf(model.id);
     const asset = Asset.create({
       id: this.d.newId("ast"),
@@ -51,6 +54,7 @@ export class RequestGeneration {
         aspectRatio: order.aspectRatio,
         label: order.label,
         ...(order.durationS === undefined ? {} : { durationS: order.durationS }),
+        ...(references.length > 0 ? { referenceUrls: references } : {}),
       },
     });
     await this.d.assets.insert(asset);

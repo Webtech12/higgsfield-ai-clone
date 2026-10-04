@@ -23,6 +23,8 @@
     "db:migrate": "node --env-file-if-exists=.env.local node_modules/drizzle-kit/bin.cjs migrate",
     "demo:prod": "node --env-file=.env.prod scripts/set-demo.mjs",
     "bakeoff": "node --env-file=.env.local scripts/model-bakeoff.mjs",
+    "talent:seed": "node --env-file-if-exists=.env.local scripts/seed-talent.mjs",
+    "talent:prod": "node --env-file=.env.prod scripts/seed-talent.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

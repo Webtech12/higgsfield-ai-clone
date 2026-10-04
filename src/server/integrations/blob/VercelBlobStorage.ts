@@ -17,10 +17,22 @@ export class VercelBlobStorage implements ObjectStorage {
       throw new Error(`Couldn't fetch the provider's output (HTTP ${String(response.status)})`);
     }
     const contentType = response.headers.get("content-type");
-    const blob = await put(key, response.body, {
+    return this.write(key, response.body, contentType);
+  }
+
+  put(key: string, bytes: Uint8Array, contentType: string): Promise<string> {
+    return this.write(key, Buffer.from(bytes), contentType);
+  }
+
+  private async write(
+    key: string,
+    body: ReadableStream<Uint8Array> | Buffer,
+    contentType: string | null,
+  ): Promise<string> {
+    const blob = await put(key, body, {
       access: "public",
       ...this.options.credentials,
-      // A retried persist step writes the same key again; a key never holds different content.
+      // A retried step writes the same key again; a key never holds different content.
       allowOverwrite: true,
       cacheControlMaxAge: 31_536_000,
       ...(contentType ? { contentType } : {}),

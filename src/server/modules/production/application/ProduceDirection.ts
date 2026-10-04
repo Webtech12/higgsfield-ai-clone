@@ -81,7 +81,16 @@ export class ProduceDirection {
           kind: "video",
           version: await this.d.assets.nextVersion(context.shot.id, "video", tx),
           model: modelId,
-          prompt: this.d.director.composeVideoPrompt(context),
+          prompt: this.d.director.composeVideoPrompt({
+            ...context,
+            // The video starts from the frame, which already holds the talent and the product; the
+            // prompt only needs to know whether there is a label to keep readable.
+            references: {
+              talent: context.talentId ? 1 : 0,
+              product: context.references.filter((r) => r.role === "product").length,
+              scene: 0,
+            },
+          }),
           // The approved storyboard frame is the video's first frame (ADR-017).
           sourceUrl: frameUrl,
           costCredits: cost,

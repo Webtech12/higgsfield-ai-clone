@@ -1,35 +1,69 @@
 import { describe, expect, it } from "vitest";
 
-import { composeFramePrompt, composeVideoPrompt, type PromptContext } from "./PromptComposer";
+import {
+  composeFramePrompt,
+  composeVideoPrompt,
+  describeReferences,
+  NO_REFERENCES,
+  type PromptContext,
+} from "./PromptComposer";
 
 const context: PromptContext = {
   elements: {
-    character: "an old lighthouse keeper in a yellow raincoat",
-    location: "a storm-battered lighthouse",
-    style: "grainy 16mm",
+    character: "the talent in a cream linen shirt, morning routine",
+    location: "a bright minimalist bathroom",
+    style: "soft natural light, clean commercial look",
   },
-  direction: { name: "Quiet", look: "muted teal and amber" },
+  direction: { name: "Real Talk", look: "warm neutrals, 50mm, gentle grain" },
   shot: {
-    description: "She finds a green bottle wedged between the rocks",
+    description: "Close-up: the talent holds the product beside her cheek and smiles at the camera",
+    motion: "She brings the bottle toward the lens and tilts the label into the light",
     cameraMove: "crash-zoom",
-    lighting: "last light of dusk",
-    mood: "hushed wonder",
+    lighting: "soft window light",
+    mood: "fresh and confident",
   },
   aspectRatio: "9:16",
+  references: { talent: 2, product: 1, scene: 1 },
 };
 
-describe("PromptComposer", () => {
-  it("puts the continuity elements into every frame prompt", () => {
+describe("describeReferences", () => {
+  it("names each reference photo by its position: talent, then product, then scene", () => {
+    expect(describeReferences({ talent: 2, product: 1, scene: 1 })).toEqual([
+      "The talent is the person in images 1–2: keep their face, hair, skin tone and build exactly",
+      "The product is the one in image 3: keep its shape, colours, materials and label text exactly",
+      "Use image 4 as the reference for the location",
+    ]);
+  });
+
+  it("numbers the product from 1 when no talent is cast", () => {
+    expect(describeReferences({ talent: 0, product: 2, scene: 0 })).toEqual([
+      "The product is the one in images 1–2: keep its shape, colours, materials and label text exactly",
+    ]);
+  });
+
+  it("says nothing when there are no photos", () => {
+    expect(describeReferences(NO_REFERENCES)).toEqual([]);
+  });
+});
+
+describe("composeFramePrompt", () => {
+  it("puts the references and the continuity elements into every frame prompt", () => {
     const prompt = composeFramePrompt(context);
 
-    expect(prompt).toContain("an old lighthouse keeper in a yellow raincoat");
-    expect(prompt).toContain("a storm-battered lighthouse");
-    expect(prompt).toContain("grainy 16mm");
+    expect(prompt).toContain("The talent is the person in images 1–2");
+    expect(prompt).toContain("a bright minimalist bathroom");
+    expect(prompt).toContain("cream linen shirt");
     expect(prompt).toContain("vertical composition");
   });
 
-  it("renders the camera move as motion text in the video prompt only", () => {
-    expect(composeVideoPrompt(context)).toContain("crash zoom");
+  it("allows the product's own label but no other text", () => {
+    expect(composeFramePrompt(context)).toContain("the only lettering is the product's own label");
+    expect(composeFramePrompt({ ...context, references: NO_REFERENCES })).toContain(
+      "No text, captions or watermarks",
+    );
+  });
+
+  it("keeps the camera move out of the still", () => {
     expect(composeFramePrompt(context)).not.toContain("crash zoom");
   });
 
@@ -40,5 +74,26 @@ describe("PromptComposer", () => {
     });
 
     expect(prompt).not.toContain("..");
+  });
+});
+
+describe("composeVideoPrompt", () => {
+  it("describes the motion and the camera move, and keeps the label readable", () => {
+    const prompt = composeVideoPrompt(context);
+
+    expect(prompt).toContain("She brings the bottle toward the lens");
+    expect(prompt).toContain("crash zoom");
+    expect(prompt).toContain("label sharp and readable");
+  });
+
+  it("falls back to the description for films planned before ads", () => {
+    const prompt = composeVideoPrompt({
+      ...context,
+      shot: { ...context.shot, motion: null },
+      references: NO_REFERENCES,
+    });
+
+    expect(prompt).toContain("Close-up: the talent holds the product");
+    expect(prompt).toContain("consistent with the first frame");
   });
 });

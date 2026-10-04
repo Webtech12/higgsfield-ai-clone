@@ -1,6 +1,6 @@
 import type { ZodType } from "zod";
 
-export type LLMPurpose = "plan" | "rewrite";
+export type LLMPurpose = "plan" | "coach" | "rewrite";
 
 export interface StructuredRequest<T> {
   purpose: LLMPurpose;

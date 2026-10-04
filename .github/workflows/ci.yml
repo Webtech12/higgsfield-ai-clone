@@ -59,6 +59,8 @@ jobs:
       - run: npm run test:integration
 
       - run: npm run db:migrate
+      # The E2E journey casts from a roster: fictional placeholders, never real people (ADR-024).
+      - run: npm run talent:seed -- --fake
       - run: npm run build
 
       - name: Start the app and the Inngest dev server

@@ -1,9 +1,10 @@
-import type { AspectRatio, BriefInput } from "@/contracts/brief";
+import type { AdBriefFields } from "@/contracts/ad";
+import type { AspectRatio } from "@/contracts/brief";
 import type { Elements } from "@/contracts/plan";
 import type { CameraMove, ShotDuration } from "@/contracts/project";
 import { NotFoundError } from "@/server/platform/errors";
 
-import type { ProjectProps } from "../domain/Project";
+import type { ProjectProps, ProjectReference } from "../domain/Project";
 import type { ProjectRepository } from "../infrastructure/ProjectRepository";
 
 import { assertCanEdit } from "./ownership";
@@ -13,11 +14,15 @@ export interface ShotContext {
   projectId: string;
   aspectRatio: AspectRatio;
   elements: Elements;
+  /** Who is cast (the talent module resolves their photos) and the brand's photos (ADR-024). */
+  talentId: string | null;
+  references: ProjectReference[];
   direction: { id: string; name: string; look: string };
   shot: {
     id: string;
     title: string;
     description: string;
+    motion: string | null;
     cameraMove: CameraMove;
     lighting: string;
     mood: string;
@@ -25,6 +30,14 @@ export interface ShotContext {
     currentFrameAssetId: string | null;
     currentVideoAssetId: string | null;
   };
+}
+
+/** The brief as the Director needs it, for planning. */
+export interface PlanningInput {
+  ad: AdBriefFields;
+  aspectRatio: AspectRatio;
+  talentId: string | null;
+  photos: { product: number; scene: number };
 }
 
 /** Pure mapping from the aggregate's snapshot, optionally limited to some directions. */
@@ -41,11 +54,14 @@ export function toShotContexts(
         projectId: p.id,
         aspectRatio: p.aspectRatio,
         elements,
+        talentId: p.talentId,
+        references: p.references,
         direction: { id: d.id, name: d.name, look: d.look },
         shot: {
           id: s.id,
           title: s.title,
           description: s.description,
+          motion: s.motion,
           cameraMove: s.cameraMove,
           lighting: s.lighting,
           mood: s.mood,
@@ -60,12 +76,19 @@ export function toShotContexts(
 export class GetGenerationContext {
   constructor(private readonly d: { repository: ProjectRepository }) {}
 
-  /** The brief as the Director needs it, for planning. */
-  async planningInput(projectId: string): Promise<BriefInput> {
+  async planningInput(projectId: string): Promise<PlanningInput> {
     const project = await this.d.repository.load(projectId);
     if (!project) throw new NotFoundError(`Project ${projectId} not found`);
     const p = project.toSnapshot();
-    return { idea: p.brief, aspectRatio: p.aspectRatio, styles: p.styles };
+    if (!p.ad) throw new NotFoundError(`Project ${projectId} has no ad brief`);
+    const count = (role: ProjectReference["role"]) =>
+      p.references.filter((r) => r.role === role).length;
+    return {
+      ad: p.ad,
+      aspectRatio: p.aspectRatio,
+      talentId: p.talentId,
+      photos: { product: count("product"), scene: count("scene") },
+    };
   }
 
   /** Every shot in the project (for the first storyboard), or one shot the owner acts on. */

@@ -26,6 +26,8 @@ export class IllegalTransitionError extends DomainError {
 export interface AssetMeta {
   aspectRatio: AspectRatio;
   durationS?: number;
+  /** Frames: the reference photos the prompt names, in order (ADR-024). */
+  referenceUrls?: string[];
   label: { title: string; subtitle: string };
 }
 

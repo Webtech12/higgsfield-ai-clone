@@ -4,7 +4,8 @@ import { asc, eq, sql } from "drizzle-orm";
 
 import { executor, type Database, type Tx as UnitOfWorkTx } from "@/server/platform/db";
 
-import { Project, type ProjectProps } from "../domain/Project";
+import { Project } from "../domain/Project";
+import { toProjectProps } from "./mappers";
 import { directions, projects, shots } from "./schema";
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -19,6 +20,9 @@ export class ProjectRepository {
       userId: p.userId,
       title: p.title,
       brief: p.brief,
+      ad: p.ad,
+      talentId: p.talentId,
+      references: p.references,
       aspectRatio: p.aspectRatio,
       styles: p.styles,
       status: p.status,
@@ -67,42 +71,7 @@ export class ProjectRepository {
       .from(shots)
       .where(eq(shots.projectId, id))
       .orderBy(asc(shots.ordinal));
-
-    const props: ProjectProps = {
-      id: row.id,
-      userId: row.userId,
-      title: row.title,
-      brief: row.brief,
-      aspectRatio: row.aspectRatio,
-      styles: row.styles,
-      status: row.status,
-      selectedDirectionId: row.selectedDirectionId,
-      isDemo: row.isDemo,
-      elements: row.elements,
-      directions: directionRows.map((d) => ({
-        id: d.id,
-        ordinal: d.ordinal,
-        name: d.name,
-        tagline: d.tagline,
-        look: d.look,
-        shots: shotRows
-          .filter((s) => s.directionId === d.id)
-          .map((s) => ({
-            id: s.id,
-            ordinal: s.ordinal,
-            title: s.title,
-            description: s.description,
-            cameraMove: s.cameraMove,
-            durationS: s.durationS,
-            lighting: s.lighting,
-            mood: s.mood,
-            frameStale: s.frameStale,
-            currentFrameAssetId: s.currentFrameAssetId,
-            currentVideoAssetId: s.currentVideoAssetId,
-          })),
-      })),
-    };
-    return Project.rehydrate(props);
+    return Project.rehydrate(toProjectProps(row, directionRows, shotRows));
   }
 
   private async save(tx: Tx, project: Project): Promise<void> {
@@ -112,6 +81,7 @@ export class ProjectRepository {
       .set({
         userId: p.userId,
         title: p.title,
+        talentId: p.talentId,
         status: p.status,
         selectedDirectionId: p.selectedDirectionId,
         elements: p.elements,
@@ -127,7 +97,15 @@ export class ProjectRepository {
         .values({ ...direction, projectId: p.id })
         .onConflictDoUpdate({
           target: directions.id,
-          set: { name: d.name, tagline: d.tagline, look: d.look },
+          set: {
+            name: d.name,
+            tagline: d.tagline,
+            look: d.look,
+            hook: d.hook,
+            headline: d.headline,
+            cta: d.cta,
+            musicBrief: d.musicBrief,
+          },
         });
       for (const s of directionShots) {
         const values = { ...s, directionId: d.id, projectId: p.id };
