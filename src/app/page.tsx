@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { BriefComposer, HowItWorks } from "@/features/brief";
 
 export default function BriefPage() {
@@ -21,6 +23,15 @@ export default function BriefPage() {
         <div className="mt-10">
           <BriefComposer />
         </div>
+        <p className="mt-4 text-sm text-muted-foreground">
+          Want to see the result first?{" "}
+          <Link
+            href="/demo"
+            className="text-foreground underline underline-offset-4 hover:text-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            Watch a film made with Director
+          </Link>
+        </p>
       </section>
 
       <HowItWorks />

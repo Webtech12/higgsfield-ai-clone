@@ -1,1 +1,6 @@
-export { getDownloadableShot, getWorkspaceVersion, getWorkspaceView } from "./workspace";
+export {
+  getDemoProjectId,
+  getDownloadableShot,
+  getWorkspaceVersion,
+  getWorkspaceView,
+} from "./workspace";

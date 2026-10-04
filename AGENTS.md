@@ -258,7 +258,7 @@ npm run test:integration   # vitest against the Neon test branch
 npm run test:e2e           # playwright, PROVIDERS=fake
 npm run db:generate        # drizzle-kit generate (new migration from schema changes)
 npm run db:migrate         # apply migrations
-npm run db:seed            # seed the demo project
+npm run demo:prod -- <id>  # make a finished production film the public demo (reads .env.prod)
 npm run auth:generate      # regenerate the Better Auth schema into identity/infrastructure
 ```
 

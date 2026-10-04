@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   progressMessage,
   SURFACE_OF_STATUS,
@@ -21,6 +23,19 @@ export function Workspace({ initial }: { initial: WorkspaceSnapshot }) {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 pb-24 sm:px-6">
       <header className="max-w-3xl">
+        {view.isDemo ? (
+          <p className="mb-4 flex flex-wrap items-center gap-3 text-sm">
+            <span className="rounded-full border border-primary/40 px-3 py-1 text-xs text-primary">
+              Demo film
+            </span>
+            <Link
+              href="/"
+              className="text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            >
+              Make your own
+            </Link>
+          </p>
+        ) : null}
         <h1 className="font-display text-4xl tracking-tight sm:text-5xl">{view.title}</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">“{view.brief}”</p>
         <p aria-live="polite" className="mt-4 text-sm font-medium text-primary">

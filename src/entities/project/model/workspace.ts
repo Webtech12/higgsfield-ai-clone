@@ -20,6 +20,8 @@ export const SURFACE_OF_STATUS = {
 
 /** The one line the page's live region announces as work progresses. */
 export function progressMessage(view: WorkspaceView): string {
+  // The demo is a finished film made by someone else, so "your film" would be wrong.
+  if (view.isDemo) return "Made with Director from the brief above. Press play to watch it.";
   return SURFACE_OF_STATUS[view.status] === "studio"
     ? productionProgress(view).message
     : boardProgress(view).message;

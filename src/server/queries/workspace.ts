@@ -62,6 +62,17 @@ export async function getDownloadableShot(
   return { url: row.url, filmTitle: row.filmTitle, shotNumber: row.ordinal + 1 };
 }
 
+/** The public demo film, if one is set: readable by anyone, writable by no one (AGENTS.md §5). */
+export async function getDemoProjectId(db: Reader): Promise<string | null> {
+  const [row] = await db
+    .select({ id: projects.id })
+    .from(projects)
+    .where(eq(projects.isDemo, true))
+    .orderBy(desc(projects.updatedAt))
+    .limit(1);
+  return row?.id ?? null;
+}
+
 type AssetRow = typeof assets.$inferSelect;
 
 const toAssetView = (row: AssetRow): AssetView => ({
