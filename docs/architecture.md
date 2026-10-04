@@ -24,7 +24,7 @@ One rule follows from that: **every boundary that will matter at scale exists in
 | D2 | **Unreliable external providers** | A provider outage must not become our outage | Ports + model registry; retries, timeouts, fallback models ([ADR-008](./adr/008-provider-ports-model-registry.md)) |
 | D3 | **Money in motion** | Double charges, overdrafts and lost refunds destroy trust | Append-only credit ledger with reservations; idempotency everywhere ([ADR-007](./adr/007-credit-ledger-reservations.md)) |
 | D4 | **Public access without a login wall** | Graders must use the app without signing in, yet anyone could drain the budget | Guest accounts via Better Auth, layered rate limits, a global spend kill-switch ([ADR-009](./adr/009-better-auth-guest-accounts.md), [ADR-016](./adr/016-rate-limits-spend-kill-switch.md)) |
-| D5 | **Large binary outputs** | Provider URLs expire; video egress costs grow quickly | Persist outputs to our own object storage behind a CDN ([ADR-010](./adr/010-persist-media-r2.md)) |
+| D5 | **Large binary outputs** | Provider URLs expire; video egress costs grow quickly | Persist outputs to our own object storage behind a CDN ([ADR-023](./adr/023-vercel-blob-media-storage.md)) |
 | D6 | **Iterative creation** | Overwriting destroys work | Immutable, versioned assets forming a lineage tree ([ADR-011](./adr/011-immutable-versioned-assets.md)) |
 | D7 | **Guest → account continuity** | Work done as a guest must survive sign-in | Deferred, idempotent guest merge via workflow ([ADR-009](./adr/009-better-auth-guest-accounts.md)) |
 
@@ -43,7 +43,7 @@ flowchart LR
   WF -->|"invokes functions"| APP
   APP -->|"plan / rewrite"| LLM["OpenAI API"]
   APP -->|"submit jobs · poll status"| MP["fal.ai<br/>image + video models"]
-  APP -->|"persist outputs"| OS[("Cloudflare R2 (r2.dev)")]
+  APP -->|"persist outputs"| OS[("Vercel Blob (CDN)")]
   U -->|"stream media"| OS
   APP -.->|"magic links, once a domain exists"| EM["Resend"]
   U -->|"OAuth"| G["Google"]
@@ -57,7 +57,7 @@ flowchart LR
 | **Inngest** | Durable steps, retries, `step.sleep` polling, concurrency keys, crons | Solves D1/D2 without running any infrastructure |
 | **fal.ai** (behind a port) | Image and image-to-video inference | Many models behind one queue API, polled from the workflow ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)) |
 | **OpenAI** (behind a port) | Brief → structured plan; remix rewrites | Structured outputs, validated again with zod ([ADR-020](./adr/020-openai-llm-provider.md)) |
-| **Cloudflare R2** | Frames and videos | Zero egress fees, which is decisive for video; served from r2.dev until a domain exists ([ADR-022](./adr/022-no-custom-domain-yet.md)) |
+| **Vercel Blob** | Frames and videos | Lives in the Vercel project with a free monthly quota and CDN delivery, so no extra account ([ADR-023](./adr/023-vercel-blob-media-storage.md)) |
 | **Upstash Redis** | Rate limiting, idempotency responses | Serverless-native |
 | **Resend** | Magic-link emails, once a domain is verified | Simple and reliable |
 | **pino** | Structured logs | Correlation IDs on every event; Sentry is deferred |
@@ -135,7 +135,7 @@ server/modules/<module>/
 Supporting code lives outside the modules:
 - `server/processes/`: cross-module workflows (`mergeGuest`, `onboarding`) that call module public APIs.
 - `server/queries/`: read-only SQL for the workspace view and gallery.
-- `server/integrations/`: vendor adapters (fal, openai, r2, upstash, resend) and a fake for each port.
+- `server/integrations/`: vendor adapters (fal, openai, blob, upstash, resend) and a fake for each port.
 - `server/platform/`: the DB client, `UnitOfWork`, HTTP wrappers, the Inngest client, env and observability. The Better Auth instance and its generated schema live in `identity/infrastructure`.
 - `server/container.ts`: the composition root.
 
@@ -340,7 +340,7 @@ Consumers are idempotent (guarded updates and unique ledger keys), so a re-sent 
 |---|---|---|---|
 | `project.plan` | director | `project/created` | plan (LLM structured output → zod, one repair retry) → `projects.applyPlan` → `step.sendEvent("project/planned")` |
 | `frames.generate` | storyboard | `project/planned` | compose each frame prompt (via director) → `production.requestGeneration` for the 9 frames |
-| `asset.generate` | production | `asset/generate.requested` | submit → poll the provider's status with `step.sleep` until done or timed out → on failure, retry on the fallback model → persist to R2 → finalize (state, capture/release, shot pointer, `project.version++`) |
+| `asset.generate` | production | `asset/generate.requested` | submit → poll the provider's status with `step.sleep` until done or timed out → on failure, retry on the fallback model → persist to Blob → finalize (state, capture/release, shot pointer, `project.version++`) |
 | `sweep` | production + processes | cron (1 min) | re-send events for assets still `queued` and merges still `pending`; fail jobs past their timeout |
 | `mergeGuest` | process | `identity/guest.linked` | reassign projects → transfer credits → mark merged (the anonymous user is kept) |
 
@@ -353,7 +353,7 @@ sequenceDiagram
   participant DB as Postgres
   participant WF as Inngest
   participant P as fal.ai
-  participant S as R2
+  participant S as Blob
   B->>API: POST /v1/projects/:id/productions (Idempotency-Key)
   API->>DB: tx: lock credits, record caps, reserve, create 3 queued video assets
   API->>WF: after commit, send asset/generate.requested ×3
@@ -433,7 +433,7 @@ REST under `/api/v1`, with contracts as zod schemas in `src/contracts` shared by
 | Prompt injection via brief | LLM output is schema-validated and only ever becomes data; brief length capped |
 | Unsafe content | Provider safety checkers enabled; `CONTENT_REJECTED` state with credits released |
 | Secrets | Vercel env only, validated at boot; `.env*` gitignored; secret scanning enabled |
-| Media access | Public r2.dev bucket with unguessable keys `u/{userId}/p/{projectId}/s/{shotId}/{assetId}.{ext}` ([ADR-022](./adr/022-no-custom-domain-yet.md)); signed URLs on the scale path |
+| Media access | Public Vercel Blob store with unguessable keys `p/{projectId}/{assetId}.{ext}` ([ADR-023](./adr/023-vercel-blob-media-storage.md)); downloads go through a same-origin route; signed URLs on the scale path |
 
 ---
 
@@ -474,7 +474,7 @@ Details are in [`standards.md` §8](./standards.md#8-testing-strategy).
 | Durable workflows, retries, fallback, concurrency keys | ✅ | Temporal migration |
 | Status polling + one-minute sweep | ✅ | Webhooks with signature verification, outbox + inbox |
 | Credit ledger with reservations and transfers | ✅ | Stripe purchases → `grant` |
-| R2 persistence (r2.dev) | ✅ | Custom domain, signed URLs, multi-region |
+| Blob persistence | ✅ | Private store with signed URLs, multi-region |
 | Caps, rate limits, kill-switch | ✅ | Tiered quotas per plan |
 | Polling with ETag | ✅ | Push updates |
 | Registry + Smart Select | ✅ basic | Health- and cost-aware routing |

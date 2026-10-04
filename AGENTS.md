@@ -55,7 +55,7 @@ Soul ID training, marketing studio, a chat agent, real payments, collaboration, 
 | Durable workflows | Inngest. Generation workflows poll the provider's status; there are no webhooks in v1 ([ADR-018](docs/adr/018-lean-core-for-the-24-hour-build.md)) |
 | LLM | OpenAI Responses API (`openai`), structured outputs validated with zod, `DIRECTOR_MODEL=gpt-6-sol` ([ADR-020](docs/adr/020-openai-llm-provider.md)) |
 | Image / video models | fal.ai (`@fal-ai/client`) queue API, polled from the workflow. Model IDs are chosen at the first real-provider run; the fake provider is used until then |
-| Object storage | Cloudflare R2 via the S3 SDK (`@aws-sdk/client-s3`), served from the bucket's public r2.dev URL until a domain exists ([ADR-022](docs/adr/022-no-custom-domain-yet.md)) |
+| Object storage | Vercel Blob (`@vercel/blob`), public, served from Vercel's CDN ([ADR-023](docs/adr/023-vercel-blob-media-storage.md)) |
 | Rate limits / idempotency store | Upstash Redis (`@upstash/ratelimit`, `@upstash/redis`) |
 | Validation | zod (shared client/server via `src/contracts`) |
 | UI | Tailwind CSS, shadcn/ui (Radix), `class-variance-authority`, `motion` |
@@ -63,7 +63,7 @@ Soul ID training, marketing studio, a chat agent, real payments, collaboration, 
 | Testing | Vitest, React Testing Library, MSW, Playwright |
 | Observability | pino structured logs. Sentry is deferred ([ADR-018](docs/adr/018-lean-core-for-the-24-hour-build.md)) |
 | Tooling | ESLint (typescript-eslint strict, eslint-plugin-boundaries, jsx-a11y), Prettier, husky, lint-staged, GitHub Actions. Formatters and linters never touch `.claude/` |
-| Hosting | Vercel (app), Neon (DB), Inngest Cloud, Cloudflare R2, Upstash |
+| Hosting | Vercel (app and Blob), Neon (DB), Inngest Cloud, Upstash |
 
 Rejected on purpose: a separate Express/Nest API service, Prisma, tRPC/GraphQL, Redux/Zustand,
 hosted auth (Clerk), Edge runtime, ffmpeg. The reasons are in `docs/adr/`.
@@ -91,7 +91,7 @@ The backend is a **modular monolith**. Each module owns its tables and exposes a
 Cross-cutting code that is not a domain module ([ADR-019](docs/adr/019-module-boundary-corrections.md)):
 - **Processes** → `src/server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`). A process may depend on any module; no module depends on a process.
 - **Read queries** → `src/server/queries/*`: read-only SQL for the workspace view (`getWorkspaceView`) and the gallery (`listProjects`). The only code that may read across module tables. It never writes.
-- **Provider Integration** → `src/server/integrations/*` (fal, openai, r2, upstash, resend, and a fake for each port). These are adapters implementing module ports.
+- **Provider Integration** → `src/server/integrations/*` (fal, openai, blob, upstash, resend, and a fake for each port). These are adapters implementing module ports.
 - **Live Status & Updates** → the workspace read query + the frontend `useProject` polling hook.
 - **Playback** → frontend `features/studio` (sequential player + downloads).
 - **Observability** → `src/server/platform/observability`.
@@ -132,7 +132,7 @@ src/
    │  └─ index.ts                        # PUBLIC API — the only import surface
    ├─ processes/                         # cross-module workflows (guest merge, onboarding grants)
    ├─ queries/                           # read-only cross-module read models (workspace, gallery)
-   ├─ integrations/                      # vendor adapters: fal/, openai/, r2/, upstash/, resend/, fake/
+   ├─ integrations/                      # vendor adapters: fal/, openai/, blob/, upstash/, resend/, fake/
    ├─ platform/                          # db client + UnitOfWork, http wrappers, inngest client,
    │                                     # env (zod), observability
    └─ container.ts                       # composition root — the ONLY place concrete classes are constructed
@@ -184,7 +184,7 @@ The Better Auth instance and its generated schema live in `server/modules/identi
   - `application/` has one use-case class per file, constructor-injected ports, and a single `execute()`.
   - `infrastructure/` and `integrations/` are classes implementing ports. Cross-cutting behaviour is added with decorators.
 - Inheritance ONLY for the `DomainError` hierarchy. Composition everywhere else. No `BaseRepository<T>` or `BaseService`.
-- Vendor SDKs (`@fal-ai/*`, `openai`, `@aws-sdk/*`, `@upstash/*`, `resend`) are imported ONLY in `server/integrations/**`.
+- Vendor SDKs (`@fal-ai/*`, `openai`, `@vercel/blob`, `@upstash/*`, `resend`) are imported ONLY in `server/integrations/**`.
   `better-auth` is imported only in `server/modules/identity/**` and `features/auth/**`.
   `drizzle-orm` is imported ONLY in `infrastructure/`, `platform/db` and `server/queries/`.
 - `server/container.ts` is the only place concrete classes are constructed. Use cases and domain code NEVER import it.
@@ -194,7 +194,7 @@ The Better Auth instance and its generated schema live in `server/modules/identi
 - **Asset lifecycle** is a table-driven state machine (`queued → submitted → running → persisting → succeeded | failed`, `failed → queued` on retry).
   Transitions are saved with guarded updates (`UPDATE … WHERE id = $1 AND status = $expected`), so a retried step can never apply a transition twice.
 - **Providers** ([ADR-018](docs/adr/018-lean-core-for-the-24-hour-build.md)): the generation workflow submits to fal, polls its status with `step.sleep` until it finishes or times out,
-  then persists the output to R2 straight away. fal results expire (about 1 hour; about 6 minutes for outputs of 10 KB or more).
+  then persists the output to Blob straight away. fal results expire (about 1 hour; about 6 minutes for outputs of 10 KB or more).
 - **Money path:** in one `UnitOfWork` transaction, lock the user's credit account row (`FOR UPDATE`), check and record the video caps,
   append the `reserve` ledger entry with an idempotency key, and create the assets. After commit, send the generation events.
   Capture on success, release on final failure.
@@ -274,7 +274,7 @@ PROVIDERS (fake | real)
 OPENAI_API_KEY, DIRECTOR_MODEL
 FAL_KEY
 INNGEST_EVENT_KEY, INNGEST_SIGNING_KEY
-R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET, R2_PUBLIC_BASE_URL
+BLOB_READ_WRITE_TOKEN
 UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
 GUEST_VIDEO_CAP, USER_VIDEO_CAP, DAILY_SPEND_CAP_USD
 NEXT_PUBLIC_APP_URL

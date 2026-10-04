@@ -280,7 +280,7 @@ const media = new InstrumentedMediaProvider(
   metrics, logger,
 );
 const llm = fake ? new FakeLLMProvider() : new OpenAILLMProvider({ apiKey: env.OPENAI_API_KEY, model: env.DIRECTOR_MODEL });
-const storage = fake ? new InMemoryStorage() : new R2Storage(env.r2);
+const storage = fake ? new PassThroughStorage() : new VercelBlobStorage({ token: env.BLOB_READ_WRITE_TOKEN });
 const rateLimiter = fake ? new InMemoryRateLimiter() : new UpstashRateLimiter(env.upstash);
 
 // modules, built bottom-up along the (acyclic) dependency graph; each factory returns the module's public API
@@ -361,7 +361,7 @@ Each pattern is used because a specific problem calls for it, never decoratively
 | **Status as the durable record + sweep** | Events sent after commit | No lost work without an outbox table ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)) |
 | **Idempotency Key** | Money-spending POSTs | No double charges |
 | **Strategy** | `ModelRoutingPolicy`, `PricingPolicy` | Swappable decision logic (Smart Select) |
-| **Adapter** | `FalMediaProvider`, `OpenAILLMProvider`, `R2Storage` | Translate vendor APIs to our ports |
+| **Adapter** | `FalMediaProvider`, `OpenAILLMProvider`, `VercelBlobStorage` | Translate vendor APIs to our ports |
 | **Decorator** | `InstrumentedMediaProvider`, HTTP wrappers | Cross-cutting concerns without modification |
 | **Factory** | `Asset.createVideo`, adapter selection in the composition root | Controlled construction, valid initial state |
 | **Composition Root** | `server/container.ts` | Explicit wiring in one place |
@@ -422,7 +422,7 @@ Each pattern is used because a specific problem calls for it, never decoratively
 |---|---|
 | Layer boundaries (backend + frontend) | `eslint-plugin-boundaries` element types: `domain`, `application`, `ports`, `adapters`, `delivery`, `feature`, `entity`, `shared`, `contracts`, each with an allowed-dependency matrix |
 | Module boundaries | `eslint-plugin-boundaries`: another module is importable only via `server/modules/<m>/index.ts`; no cycles (plus `import/no-cycle`) |
-| Vendor isolation | `no-restricted-imports`: `@fal-ai/*`, `openai`, `@aws-sdk/*`, `@upstash/*`, `resend` only under `server/integrations/**`; `drizzle-orm` only under `**/infrastructure/**`, `server/platform/db/**` and `server/queries/**`; `better-auth` only under `server/modules/identity/**` and `features/auth/**` |
+| Vendor isolation | `no-restricted-imports`: `@fal-ai/*`, `openai`, `@vercel/blob`, `@upstash/*`, `resend` only under `server/integrations/**` (anchored to the package name, so `integrations/openai/` itself isn't caught); `drizzle-orm` only under `**/infrastructure/**`, `server/platform/db/**` and `server/queries/**`; `better-auth` only under `server/modules/identity/**` and `features/auth/**` |
 | No container in inner layers | `no-restricted-imports` of `server/container` from `server/modules/**/domain/**` and `server/modules/**/application/**` |
 | Client/server separation | `import "server-only"` in `server/**`; boundary lint |
 | Type safety | `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`; `@typescript-eslint/strict-type-checked`; `no-explicit-any: error`; `no-floating-promises: error` |

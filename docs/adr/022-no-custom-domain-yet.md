@@ -1,6 +1,6 @@
 # ADR-022: No custom domain yet — r2.dev media and Google-only sign-in live
 
-- **Status:** Accepted
+- **Status:** Accepted; the media half is superseded by [ADR-023](./023-vercel-blob-media-storage.md) (Vercel Blob, served from Vercel's CDN)
 - **Date:** 2026-09-23
 - **Related:** amends [ADR-009](./009-better-auth-guest-accounts.md) and [ADR-010](./010-persist-media-r2.md)
 

@@ -228,7 +228,7 @@ export const assetStatusMeta = {
 
 - RSC keeps the Brief and Projects pages close to zero client JavaScript.
 - The player and remix panel are loaded with `next/dynamic`, only when needed.
-- `next/image` serves storyboard frames with the R2/CDN host added to `remotePatterns`. Frames use responsive sizes and blur placeholders.
+- `next/image` serves storyboard frames with the Vercel Blob host added to `remotePatterns`. Frames use responsive sizes and blur placeholders.
 - `<video preload="metadata">` with the poster set to the shot's frame. The next clip is preloaded while the current one plays, so the sequence has no gap between shots.
 - There are no request waterfalls, because the project page loads the whole aggregate in one server call.
 - `@next/bundle-analyzer` runs once before submission, and any large client dependency must be justified.

@@ -13,7 +13,7 @@ Each ADR records one significant decision: its context, the decision, the altern
 | [007](./007-credit-ledger-reservations.md) | Append-only credit ledger with reservations | Accepted |
 | [008](./008-provider-ports-model-registry.md) | Provider ports, a model registry and Smart Select | Accepted; amended by 020 |
 | [009](./009-better-auth-guest-accounts.md) | Better Auth with guest (anonymous) accounts and a deferred merge | Accepted; amended by 019 and 022 |
-| [010](./010-persist-media-r2.md) | Persist generated media to Cloudflare R2 | Accepted; amended by 022 |
+| [010](./010-persist-media-r2.md) | Persist generated media to Cloudflare R2 | Superseded by 023 |
 | [011](./011-immutable-versioned-assets.md) | Immutable, versioned assets separate from job attempts | Accepted; amended by 018 |
 | [012](./012-rest-route-handlers-over-server-actions.md) | REST route handlers over Server Actions for mutations | Accepted |
 | [013](./013-polling-read-model-etag.md) | Clients poll our read model with ETags | Accepted |
@@ -25,6 +25,7 @@ Each ADR records one significant decision: its context, the decision, the altern
 | [019](./019-module-boundary-corrections.md) | Module boundary corrections | Accepted |
 | [020](./020-openai-llm-provider.md) | OpenAI as the LLM provider | Accepted |
 | [021](./021-toolchain-npm-and-node-versions.md) | Toolchain: npm, Node 24 deployed, Node 26 locally | Accepted |
-| [022](./022-no-custom-domain-yet.md) | No custom domain yet: r2.dev media and Google-only sign-in live | Accepted |
+| [022](./022-no-custom-domain-yet.md) | No custom domain yet: r2.dev media and Google-only sign-in live | Accepted; media half superseded by 023 |
+| [023](./023-vercel-blob-media-storage.md) | Store generated media in Vercel Blob instead of Cloudflare R2 | Accepted |
 
 To add a decision, copy [`000-template.md`](./000-template.md) to the next number.
