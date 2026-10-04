@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   composeFramePrompt,
+  composeVideoNegativePrompt,
   composeVideoPrompt,
   describeReferences,
   NO_REFERENCES,
@@ -67,6 +68,17 @@ describe("composeFramePrompt", () => {
     expect(composeFramePrompt(context)).not.toContain("crash zoom");
   });
 
+  it("asks for an unretouched real photograph, not the glossy look of an AI ad (ADR-026)", () => {
+    const prompt = composeFramePrompt(context);
+    const widescreen = composeFramePrompt({ ...context, aspectRatio: "16:9" });
+
+    expect(prompt).toContain("A real, unretouched photograph");
+    expect(prompt).toContain("no airbrushed or plastic skin");
+    expect(prompt).not.toContain("photorealistic commercial photography");
+    expect(widescreen).toContain("widescreen composition");
+    expect(widescreen).not.toContain("cinematic");
+  });
+
   it("never produces doubled full stops", () => {
     const prompt = composeFramePrompt({
       ...context,
@@ -95,5 +107,23 @@ describe("composeVideoPrompt", () => {
 
     expect(prompt).toContain("Close-up: the talent holds the product");
     expect(prompt).toContain("consistent with the first frame");
+  });
+
+  it("asks for real footage with steady faces and hands", () => {
+    const prompt = composeVideoPrompt(context);
+
+    expect(prompt).toContain("Real camera footage at natural speed");
+    expect(prompt).toContain("steady faces and hands");
+    expect(prompt).not.toContain("Photorealistic commercial footage");
+  });
+});
+
+describe("composeVideoNegativePrompt", () => {
+  it("lists the tells of generated footage for the model to avoid", () => {
+    const negative = composeVideoNegativePrompt();
+
+    for (const tell of ["CGI", "plastic or waxy skin", "morphing", "garbled label text"]) {
+      expect(negative).toContain(tell);
+    }
   });
 });

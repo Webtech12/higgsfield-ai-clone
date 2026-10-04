@@ -4,7 +4,11 @@ import type { TalentApi } from "@/server/modules/talent";
 
 import { CoachBrief } from "./application/CoachBrief";
 import { PlanProject } from "./application/PlanProject";
-import { composeFramePrompt, composeVideoPrompt } from "./domain/PromptComposer";
+import {
+  composeFramePrompt,
+  composeVideoNegativePrompt,
+  composeVideoPrompt,
+} from "./domain/PromptComposer";
 import type { LLMProvider } from "./ports/LLMProvider";
 import { createProjectPlanWorkflow } from "./workflows/projectPlan";
 
@@ -24,6 +28,7 @@ export function createDirectorModule(deps: {
     coachBrief: coachBrief.execute.bind(coachBrief),
     composeFramePrompt,
     composeVideoPrompt,
+    composeVideoNegativePrompt,
   };
   const workflows = [
     createProjectPlanWorkflow({

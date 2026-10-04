@@ -24,10 +24,24 @@ const CAMERA_MOVE_PHRASES = {
 } satisfies Record<CameraMove, string>;
 
 const FRAMING_BY_RATIO = {
-  "16:9": "cinematic widescreen composition",
+  "16:9": "widescreen composition",
   "9:16": "vertical composition framed for social feeds, subject centred",
   "1:1": "square composition, subject centred",
 } satisfies Record<AspectRatio, string>;
+
+/**
+ * Asks for a real photograph rather than an "AI ad" (ADR-026). The words that make images look
+ * generated (photorealistic, commercial, cinematic, crisp) are left out on purpose.
+ */
+const REAL_PHOTO =
+  "A real, unretouched photograph of a real moment: true-to-life colour and white balance, real skin texture with pores and fine lines, natural light falloff and soft shadows, small everyday imperfections. Not a 3D render, illustration or CGI; no airbrushed or plastic skin, no HDR glow, no oversaturation";
+
+const REAL_FOOTAGE =
+  "Real camera footage at natural speed: lifelike human motion, steady faces and hands, consistent light and colour, no morphing or warping, no on-screen text";
+
+/** What the video model should avoid, where it takes a negative prompt: the tells of generated footage. */
+const VIDEO_NEGATIVE_PROMPT =
+  "CGI, 3D render, cartoon, plastic or waxy skin, airbrushed skin, morphing, warping, flickering, jitter, extra fingers, distorted hands, distorted face, changing or garbled label text, subtitles, captions, watermark, logo overlay, blurry, low quality";
 
 /** How many reference photos come before the prompt, in this order. */
 export interface ReferenceCounts {
@@ -105,7 +119,8 @@ export function composeFramePrompt({
     `Location: ${elements.location}`,
     `Look: ${direction.look}, ${elements.style}`,
     `Lighting: ${shot.lighting}. Mood: ${shot.mood}`,
-    `${FRAMING_BY_RATIO[aspectRatio]}, photorealistic commercial photography, natural skin texture, crisp detail`,
+    FRAMING_BY_RATIO[aspectRatio],
+    REAL_PHOTO,
     references.product > 0
       ? "No added text, captions or watermarks: the only lettering is the product's own label"
       : "No text, captions or watermarks",
@@ -121,8 +136,13 @@ export function composeVideoPrompt({ direction, shot, references }: PromptContex
       ? "Keep the person and the product exactly as in the first frame, with the product label sharp and readable"
       : "Keep every person and object consistent with the first frame",
     `Look: ${direction.look}. Mood: ${shot.mood}`,
-    "Photorealistic commercial footage, smooth natural motion, no on-screen text",
+    REAL_FOOTAGE,
   ]);
+}
+
+/** The negative prompt that travels with every video request (ADR-026). */
+export function composeVideoNegativePrompt(): string {
+  return VIDEO_NEGATIVE_PROMPT;
 }
 
 export function describeCameraMove(move: CameraMove): string {
