@@ -1,4 +1,10 @@
-import type { AssetView, CameraMove, ShotView, WorkspaceView } from "@/contracts/project";
+import type {
+  AssetView,
+  CameraMove,
+  DirectionView,
+  ShotView,
+  WorkspaceView,
+} from "@/contracts/project";
 
 import { ASSET_STATUS_META } from "./statusMeta";
 
@@ -16,6 +22,21 @@ export const CAMERA_MOVE_LABEL = {
   "crash-zoom": "Crash zoom",
   fpv: "FPV",
 } satisfies Record<CameraMove, string>;
+
+/** A concept's ad pitch: what stops the scroll, the end card and the music (ADR-024). */
+export interface ConceptPitch {
+  hook: string;
+  headline: string;
+  cta: string;
+  music: string;
+}
+
+/** Null for films planned before ads, which have no pitch to show. */
+export function conceptPitch(direction: DirectionView): ConceptPitch | null {
+  const { hook, headline, cta, musicBrief } = direction;
+  if (!hook || !headline || !cta || !musicBrief) return null;
+  return { hook, headline, cta, music: musicBrief };
+}
 
 export type FrameState =
   | { kind: "waiting" }
@@ -69,14 +90,14 @@ export function boardProgress(view: WorkspaceView): BoardProgress {
   // A failed frame shows its own state on its card, so it doesn't keep the page "drawing".
   const message =
     view.status === "planning"
-      ? "The Director is writing three directions…"
+      ? "The Director is writing three concepts…"
       : view.status === "failed"
         ? "The Director couldn't finish this plan."
         : framesReady + framesFailed < framesTotal
           ? `Drawing storyboards: ${String(framesReady)} of ${String(framesTotal)} frames ready`
           : view.selectedDirectionId
-            ? "Direction chosen. Refine the shots, then produce."
-            : "Storyboards ready. Pick the direction you like best.";
+            ? "Concept chosen. Refine the shots, then produce."
+            : "Storyboards ready. Pick the concept you like best.";
 
   return { framesReady, framesTotal, message };
 }

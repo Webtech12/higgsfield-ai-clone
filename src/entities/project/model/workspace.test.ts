@@ -1,11 +1,46 @@
 import { describe, expect, it } from "vitest";
 
 import { asset, shot, view } from "./fixtures";
-import { progressMessage } from "./workspace";
+import { adHeader, progressMessage } from "./workspace";
+
+describe("adHeader", () => {
+  it("shows the format, the product, the cast and the product photos only", () => {
+    const header = adHeader(
+      view("planned", [], {
+        ad: {
+          template: "unboxing",
+          productName: "Aero Bottle",
+          benefit: "Keeps water cold for 24 hours",
+          audience: "",
+          message: "",
+          cta: "",
+          moods: [],
+          sceneDirection: "",
+        },
+        cast: { id: "tal_1", name: "Ava", tagline: "Creator", photoUrl: "/ava.jpg" },
+        references: [
+          { url: "/bottle.jpg", role: "product" },
+          { url: "/kitchen.jpg", role: "scene" },
+        ],
+      }),
+    );
+
+    expect(header).toEqual({
+      format: "Unboxing",
+      productName: "Aero Bottle",
+      cast: { id: "tal_1", name: "Ava", tagline: "Creator", photoUrl: "/ava.jpg" },
+      productPhotos: ["/bottle.jpg"],
+    });
+  });
+
+  it("is null for a film made before ads", () => {
+    expect(adHeader(view("planned", []))).toBeNull();
+  });
+});
 
 describe("progressMessage", () => {
   it("narrates the Board while planning and storyboarding", () => {
-    expect(progressMessage(view("planning", []))).toBe("The Director is writing three directions…");
+    expect(progressMessage(view("planning", []))).toBe("The Director is writing three concepts…");
   });
 
   it("doesn't call the public demo 'your film'", () => {

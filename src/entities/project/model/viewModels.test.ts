@@ -1,7 +1,28 @@
 import { describe, expect, it } from "vitest";
 
 import { asset, shot, view } from "./fixtures";
-import { boardProgress, frameState, isSettled } from "./viewModels";
+import { boardProgress, conceptPitch, frameState, isSettled } from "./viewModels";
+
+describe("conceptPitch", () => {
+  it("collects a concept's hook, end card and music", () => {
+    const [concept] = view("planned", []).directions;
+    if (!concept) throw new Error("fixture has a concept");
+
+    expect(conceptPitch(concept)).toEqual({
+      hook: "h",
+      headline: "Glow in 7 days",
+      cta: "Shop now",
+      music: "Warm indie pop",
+    });
+  });
+
+  it("has nothing to show for a film planned before ads", () => {
+    const [concept] = view("planned", []).directions;
+    if (!concept) throw new Error("fixture has a concept");
+
+    expect(conceptPitch({ ...concept, hook: null, headline: null })).toBeNull();
+  });
+});
 
 describe("frameState", () => {
   it("shows a ready frame, flagged while a redraw is in flight", () => {
@@ -70,7 +91,7 @@ describe("boardProgress", () => {
     const shots = [shot({ frame: asset("succeeded", "/a.svg") }), shot({ frame: asset("failed") })];
 
     expect(boardProgress(view("planned", shots)).message).toBe(
-      "Storyboards ready. Pick the direction you like best.",
+      "Storyboards ready. Pick the concept you like best.",
     );
   });
 });

@@ -1,36 +1,66 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-// The core loop on fakes: brief → three storyboarded directions → choose one → edit a shot → redraw
-// its frame → produce (30 of the guest's 40 credits) → watch the film. Generation is asynchronous,
-// so waits are generous.
-test("brief to film: storyboard, edit, produce and play", async ({ page }) => {
+// A 1×1 PNG: enough for the browser to resize and for the server to recognise as a photo.
+const TINY_PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
+
+async function writeBrief(page: Page) {
+  await page.goto("/");
+  await page.getByLabel("Product", { exact: true }).fill("LUMA Vitamin C Serum");
+  await page
+    .getByLabel("Why it matters")
+    .fill("Brighter, more even-looking skin from a two-minute morning routine");
+}
+
+// The core loop on fakes (ADR-024): an ad brief with a product photo, polished with AI and cast
+// with a talent → three storyboarded concepts → choose one → edit a shot → redraw its frame →
+// produce (30 of the guest's 40 credits) → watch it. Generation is asynchronous, so waits are
+// generous.
+test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", async ({ page }) => {
   test.setTimeout(300_000);
 
-  await page.goto("/");
+  await writeBrief(page);
   await page
-    .getByLabel("What's your film about?")
-    .fill("A lighthouse keeper finds a message in a bottle from her future self");
-  await page.getByRole("button", { name: "Direct it" }).click();
+    .getByLabel("Add photo")
+    .first()
+    .setInputFiles({ name: "luma.png", mimeType: "image/png", buffer: TINY_PNG });
+  await expect(page.getByRole("button", { name: "Remove product photo 1" })).toBeVisible();
+  await expect(page.getByRole("status")).toHaveCount(0, { timeout: 30_000 });
+
+  // Polish with AI: the fake coach suggests a call to action; applying it fills the field.
+  await page.getByRole("button", { name: "Polish with AI" }).click();
+  await expect(page.getByText("Suggested rewrites")).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Apply", exact: true }).first().click();
+  await expect(page.getByLabel("Call to action")).toHaveValue("Try LUMA Vitamin C Serum today");
+
+  // Casting is a click on the talent's card, which is the label of a visually hidden radio.
+  await page.getByText("Ava Moreno", { exact: true }).click();
+  await expect(page.getByLabel(/^Cast Ava Moreno/)).toBeChecked();
+  await page.getByRole("button", { name: "Create 3 concepts" }).click();
 
   await expect(page).toHaveURL(/\/p\/prj_/, { timeout: 60_000 });
+  await expect(page.getByText("Starring Ava Moreno")).toBeVisible();
   await expect(page.getByText(/Storyboards ready/)).toBeVisible({ timeout: 120_000 });
-  await expect(page.getByRole("img")).toHaveCount(9);
-  await expect(page.getByRole("button", { name: "Choose this direction" })).toHaveCount(3);
+  await expect(page.getByRole("img", { name: /in frame$/ })).toHaveCount(9);
+  await expect(page.getByText("End card")).toHaveCount(3);
+  await expect(page.getByRole("button", { name: "Choose this concept" })).toHaveCount(3);
 
-  await page.getByRole("button", { name: "Choose this direction" }).nth(1).click();
-  await expect(page.getByText("Your direction")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Choose this direction" })).toHaveCount(0);
+  // Choosing is a round trip and a refetch: allow for a busy test server.
+  await page.getByRole("button", { name: "Choose this concept" }).nth(1).click();
+  await expect(page.getByText("Your concept")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Choose this concept" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Edit shot 1" }).click();
   await page
     .getByLabel("What the camera sees")
-    .fill("Rain streaks across the lamp glass as she reads");
+    .fill("Close-up: she holds the bottle beside her cheek as morning light hits the label");
   await page.getByRole("button", { name: "Save shot" }).click();
   await expect(page.getByText("Frame out of date")).toBeVisible();
 
   await page.getByRole("button", { name: "Redraw frame" }).click();
   await expect(page.getByText("Frame out of date")).toBeHidden({ timeout: 60_000 });
-  await expect(page.getByText("Rain streaks across the lamp glass as she reads")).toBeVisible();
 
   // Produce: the price is on the button, and the header balance drops when it's reserved.
   await expect(page.getByText("40 credits", { exact: true })).toBeVisible();
@@ -62,11 +92,23 @@ test("brief to film: storyboard, edit, produce and play", async ({ page }) => {
   await expect(page.getByText("Shot 2 of 3")).toBeVisible({ timeout: 20_000 });
 });
 
-test("a brief that is too short is explained, not sent", async ({ page }) => {
+test("an incomplete brief is explained, not sent", async ({ page }) => {
+  test.setTimeout(90_000);
   await page.goto("/");
-  await page.getByLabel("What's your film about?").fill("A film");
-  await page.getByRole("button", { name: "Direct it" }).click();
+  await page.getByLabel("Product", { exact: true }).fill("L");
+  await page.getByRole("button", { name: "Create 3 concepts" }).click();
 
-  await expect(page.getByText(/at least 12 characters/)).toBeVisible();
+  await expect(page.getByText("Name the product in 2 to 60 characters.")).toBeVisible();
+  await expect(page.getByText(/Pick a talent: a UGC testimonial needs a person/)).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
+});
+
+test("a product hero can go without a talent", async ({ page }) => {
+  test.setTimeout(90_000);
+  await writeBrief(page);
+  await page.getByText("Product hero", { exact: true }).click();
+  await expect(page.getByRole("radio", { name: /No talent/ })).toBeChecked();
+
+  await page.getByRole("button", { name: "Create 3 concepts" }).click();
+  await expect(page).toHaveURL(/\/p\/prj_/, { timeout: 60_000 });
 });

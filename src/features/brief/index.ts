@@ -1,2 +1,2 @@
-export { BriefComposer } from "./components/BriefComposer";
+export { AdBriefComposer } from "./components/AdBriefComposer";
 export { HowItWorks } from "./components/HowItWorks";

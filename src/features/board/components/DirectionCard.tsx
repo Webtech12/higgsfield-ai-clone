@@ -4,12 +4,14 @@ import { Check } from "lucide-react";
 
 import type { AspectRatio } from "@/contracts/brief";
 import type { DirectionView } from "@/contracts/project";
+import { conceptPitch } from "@/entities/project";
 import { cn } from "@/shared/lib/cn";
 import { Button } from "@/shared/ui";
 
+import { ConceptPitch } from "./ConceptPitch";
 import { ShotCard, type ShotCardActions } from "./ShotCard";
 
-/** A creative direction: its pitch, its look and its three storyboarded shots. */
+/** A concept: its angle, its pitch, its look and its three storyboarded shots. */
 export function DirectionCard({
   direction,
   ratio,
@@ -24,7 +26,7 @@ export function DirectionCard({
   ratio: AspectRatio;
   isSelected: boolean;
   canChoose: boolean;
-  /** This direction is the one being chosen right now. */
+  /** This concept is the one being chosen right now. */
   isChoosing: boolean;
   /** Some choice is in flight, so every choose button waits. */
   isLocked: boolean;
@@ -32,6 +34,7 @@ export function DirectionCard({
   shotActions: ((shotId: string) => ShotCardActions) | null;
 }) {
   const headingId = `direction-${direction.id}`;
+  const pitch = conceptPitch(direction);
   return (
     <section
       aria-labelledby={headingId}
@@ -42,9 +45,7 @@ export function DirectionCard({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-2xl">
-          <p className="font-mono text-xs text-muted-foreground">
-            Direction {direction.ordinal + 1}
-          </p>
+          <p className="font-mono text-xs text-muted-foreground">Concept {direction.ordinal + 1}</p>
           <h3 id={headingId} className="mt-1 font-display text-3xl tracking-tight">
             {direction.name}
           </h3>
@@ -53,14 +54,16 @@ export function DirectionCard({
         </div>
         {isSelected ? (
           <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-full border border-primary/40 px-3 py-1 text-xs text-primary">
-            <Check className="size-3.5" aria-hidden /> Your direction
+            <Check className="size-3.5" aria-hidden /> Your concept
           </span>
         ) : canChoose ? (
           <Button onClick={onChoose} disabled={isLocked} className="shrink-0 self-start">
-            {isChoosing ? "Choosing…" : "Choose this direction"}
+            {isChoosing ? "Choosing…" : "Choose this concept"}
           </Button>
         ) : null}
       </div>
+
+      {pitch ? <ConceptPitch pitch={pitch} /> : null}
 
       <ol className="mt-5 grid gap-4 sm:grid-cols-3">
         {direction.shots.map((shot, index) => (

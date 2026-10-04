@@ -1,19 +1,19 @@
 const STEPS = [
   {
-    title: "Write a rough idea",
-    body: "One sentence is enough. No prompt engineering, no model to pick.",
+    title: "Brief it like a pro",
+    body: "Pick a proven format, add your product photos, and let Polish with AI sharpen the copy.",
   },
   {
-    title: "Compare three directions",
-    body: "Each comes with its own look and three storyboarded shots, side by side.",
+    title: "Cast real talent",
+    body: "Choose a creator from the roster. Everyone on it signed a release to appear in AI-made ads.",
   },
   {
-    title: "Produce the one you like",
-    body: "Every approved frame becomes the first frame of its shot, so you get what you saw.",
+    title: "Compare three concepts",
+    body: "Each has its own hook, look and storyboard, with your talent and your product in every frame.",
   },
   {
-    title: "Remix one shot",
-    body: "Fix the shot that's off without touching the rest. Every version is kept.",
+    title: "Finish and refine",
+    body: "The chosen concept becomes a finished ad with music and an end card. Refine it, then download.",
   },
 ] as const;
 

@@ -15,9 +15,17 @@ export { ASSET_STATUS_META, type StatusMeta, type Tone } from "./model/statusMet
 export {
   boardProgress,
   CAMERA_MOVE_LABEL,
+  conceptPitch,
   frameState,
   isSettled,
   type BoardProgress,
+  type ConceptPitch,
   type FrameState,
 } from "./model/viewModels";
-export { progressMessage, SURFACE_OF_STATUS, type Surface } from "./model/workspace";
+export {
+  adHeader,
+  progressMessage,
+  SURFACE_OF_STATUS,
+  type AdHeader,
+  type Surface,
+} from "./model/workspace";

@@ -9,7 +9,7 @@ import { readSnapshot } from "@/server/platform/db";
 
 import { Workspace } from "./_components/Workspace";
 
-export const metadata: Metadata = { title: "Your film" };
+export const metadata: Metadata = { title: "Your ad" };
 
 /** RSC: load the workspace server-side (no spinner on first paint), then poll on the client. */
 export default async function ProjectPage({ params }: PageProps<"/p/[projectId]">) {

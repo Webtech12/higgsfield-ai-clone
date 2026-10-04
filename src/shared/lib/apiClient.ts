@@ -48,6 +48,20 @@ export async function apiRequest<T>(
   return schema.parse(await response.json());
 }
 
+/** Sends one file as multipart form data and parses the response with its contract. */
+export async function apiUpload<T>(
+  path: string,
+  schema: ZodType<T>,
+  file: Blob,
+  filename: string,
+): Promise<T> {
+  const body = new FormData();
+  body.append("file", file, filename);
+  const response = await fetch(apiUrl(path), { method: "POST", body });
+  if (!response.ok) throw await ApiError.fromResponse(response);
+  return schema.parse(await response.json());
+}
+
 /** A GET that honours ETags: returns null on 304 so the caller keeps what it has. */
 export async function apiGetIfChanged<T>(
   path: string,

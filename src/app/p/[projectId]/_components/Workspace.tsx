@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import {
+  adHeader,
   progressMessage,
   SURFACE_OF_STATUS,
   toFilm,
@@ -12,6 +13,8 @@ import {
 import { Board } from "@/features/board";
 import { Studio } from "@/features/studio";
 
+import { AdHeaderStrip } from "./AdHeaderStrip";
+
 /**
  * The project page. Features never import each other (AGENTS.md §7), so the Board and the Studio are
  * composed here: one polling read model feeds both, and the project's status picks the surface.
@@ -19,6 +22,7 @@ import { Studio } from "@/features/studio";
 export function Workspace({ initial }: { initial: WorkspaceSnapshot }) {
   const { data } = useProject(initial.view.id, initial);
   const view = data.view;
+  const header = adHeader(view);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-10 pb-24 sm:px-6">
@@ -38,6 +42,7 @@ export function Workspace({ initial }: { initial: WorkspaceSnapshot }) {
         ) : null}
         <h1 className="font-display text-4xl tracking-tight sm:text-5xl">{view.title}</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">“{view.brief}”</p>
+        {header ? <AdHeaderStrip header={header} /> : null}
         <p aria-live="polite" className="mt-4 text-sm font-medium text-primary">
           {progressMessage(view)}
         </p>
