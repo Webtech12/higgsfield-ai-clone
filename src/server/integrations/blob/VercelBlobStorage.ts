@@ -1,4 +1,4 @@
-import { getDownloadUrl, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 
 import type { ObjectStorage } from "@/server/modules/media";
 
@@ -26,10 +26,5 @@ export class VercelBlobStorage implements ObjectStorage {
       ...(contentType ? { contentType } : {}),
     });
     return blob.url;
-  }
-
-  /** Blob answers `?download=1` with `Content-Disposition: attachment`. */
-  downloadUrl(publicUrl: string): string {
-    return getDownloadUrl(publicUrl);
   }
 }

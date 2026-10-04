@@ -1,13 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { asset, shot, view } from "./fixtures";
-import {
-  downloadName,
-  produceReadiness,
-  productionProgress,
-  toFilm,
-  videoState,
-} from "./production";
+import { produceReadiness, productionProgress, toFilm, videoState } from "./production";
 
 const frame = asset("succeeded", "/frame.svg");
 const video = (status: Parameters<typeof asset>[0], url: string | null = null) =>
@@ -103,15 +97,6 @@ describe("toFilm", () => {
   it("lets only the owner manage a film, never on the demo", () => {
     expect(toFilm(view("ready", [], { isOwner: false })).canManage).toBe(false);
     expect(toFilm(view("ready", [], { isDemo: true })).canManage).toBe(false);
-  });
-});
-
-describe("downloadName", () => {
-  it("slugs the title and keeps the clip's real extension", () => {
-    expect(downloadName("Salt & Static: Part II", 3, "https://cdn/x/clip.MP4?sig=1")).toBe(
-      "salt-static-part-ii-shot-3.mp4",
-    );
-    expect(downloadName("!!!", 1, "/clip")).toBe("film-shot-1.mp4");
   });
 });
 

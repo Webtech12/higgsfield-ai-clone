@@ -4,8 +4,6 @@
 export interface ObjectStorage {
   /** Copies the object at `sourceUrl` under `key` and returns its public URL. */
   persistFromUrl(sourceUrl: string, key: string): Promise<string>;
-  /** The form of a public URL that makes browsers save the file instead of showing it. */
-  downloadUrl(publicUrl: string): string;
 }
 
 export function createMediaModule(deps: { storage: ObjectStorage }) {
@@ -19,11 +17,6 @@ export function createMediaModule(deps: { storage: ObjectStorage }) {
       // Random project and asset ids make keys unguessable in a public store (ADR-023).
       const key = `p/${input.projectId}/${input.assetId}.${input.extension}`;
       return deps.storage.persistFromUrl(input.sourceUrl, key);
-    },
-
-    /** Where a download link should land. The `download` attribute is ignored cross-origin. */
-    downloadUrlFor(publicUrl: string): string {
-      return deps.storage.downloadUrl(publicUrl);
     },
   };
 }

@@ -104,6 +104,21 @@ export const WorkspaceView = z.object({
 });
 export type WorkspaceView = z.infer<typeof WorkspaceView>;
 
+/**
+ * "the-keeper-shot-2.mp4": the film's title, the shot number and the clip's real extension. Shared,
+ * so a download link's suggested name and the name the server sends always agree.
+ */
+export function shotFilename(filmTitle: string, shotNumber: number, url: string): string {
+  const slug =
+    filmTitle
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .slice(0, 48)
+      .replace(/^-+|-+$/g, "") || "film";
+  const extension = /\.(mp4|webm|mov)(?=$|[?#])/i.exec(url)?.[1]?.toLowerCase() ?? "mp4";
+  return `${slug}-shot-${String(shotNumber)}.${extension}`;
+}
+
 // --- Commands --------------------------------------------------------------------------------
 
 export const CreateProjectResponse = z.object({ projectId: z.string() });

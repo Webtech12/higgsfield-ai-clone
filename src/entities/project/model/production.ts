@@ -1,5 +1,5 @@
 import type { AspectRatio } from "@/contracts/brief";
-import type { ShotView, WorkspaceView } from "@/contracts/project";
+import { shotFilename, type ShotView, type WorkspaceView } from "@/contracts/project";
 import { apiUrl } from "@/shared/lib/apiClient";
 
 import { ASSET_STATUS_META, type Tone } from "./statusMeta";
@@ -122,22 +122,10 @@ function toFilmShot(view: WorkspaceView, shot: ShotView, number: number): FilmSh
             href: apiUrl(
               `/projects/${encodeURIComponent(view.id)}/assets/${encodeURIComponent(video.assetId)}/download`,
             ),
-            filename: downloadName(view.title, number, video.url),
+            filename: shotFilename(view.title, number, video.url),
           }
         : null,
   };
-}
-
-/** "the-keeper-shot-2.mp4": the film's title, the shot number and the clip's real extension. */
-export function downloadName(filmTitle: string, shotNumber: number, url: string): string {
-  const slug =
-    filmTitle
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .slice(0, 48)
-      .replace(/^-+|-+$/g, "") || "film";
-  const extension = /\.(mp4|webm|mov)(?=$|[?#])/i.exec(url)?.[1]?.toLowerCase() ?? "mp4";
-  return `${slug}-shot-${String(shotNumber)}.${extension}`;
 }
 
 export interface ProduceReadiness {

@@ -65,7 +65,6 @@ function build() {
   return {
     db,
     routing,
-    media,
     projects,
     credits,
     limits,

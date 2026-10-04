@@ -21,8 +21,9 @@ pairs with Vercel's OIDC token (so it only works on Vercel). Objects are served 
 
 - Keys stay `p/{projectId}/{assetId}.{ext}`: random ids keep them unguessable.
 - Writes set `allowOverwrite`, so a retried persist step is idempotent.
-- Downloads use the Blob `downloadUrl` form (`?download=1`), which answers with
-  `Content-Disposition: attachment`. The `download` attribute alone is ignored cross-origin.
+- Downloads stream through our own route with `Content-Disposition: attachment` and a friendly
+  filename. The `download` attribute is ignored cross-origin, and Blob's own `?download=1` form
+  would name the file after its storage key.
 
 ## Alternatives considered
 

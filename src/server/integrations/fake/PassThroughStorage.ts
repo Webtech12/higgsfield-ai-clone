@@ -5,9 +5,4 @@ export class PassThroughStorage implements ObjectStorage {
   persistFromUrl(sourceUrl: string): Promise<string> {
     return Promise.resolve(sourceUrl);
   }
-
-  /** Fake media is same-origin, where the `download` attribute already works. */
-  downloadUrl(publicUrl: string): string {
-    return publicUrl;
-  }
 }

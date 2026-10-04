@@ -37,19 +37,29 @@ export async function getWorkspaceVersion(
   return `${String(row.version)}-${String(row.assetsAt?.getTime() ?? 0)}`;
 }
 
-/** A finished asset's public URL, if the viewer may see its project (theirs, or the public demo). */
-export async function getFinishedAssetUrl(
+/**
+ * A finished shot the viewer may download (from their own project, or the public demo), with what
+ * its friendly filename needs: the film's title and the shot's number in its direction.
+ */
+export async function getDownloadableShot(
   db: Reader,
   projectId: string,
   assetId: string,
   viewerId: string | null,
-): Promise<string | null> {
+): Promise<{ url: string; filmTitle: string; shotNumber: number } | null> {
   const [row] = await db
-    .select({ url: assets.url, status: assets.status })
+    .select({
+      url: assets.url,
+      status: assets.status,
+      filmTitle: projects.title,
+      ordinal: shots.ordinal,
+    })
     .from(assets)
     .innerJoin(projects, eq(projects.id, assets.projectId))
+    .innerJoin(shots, eq(shots.id, assets.shotId))
     .where(and(eq(assets.id, assetId), canView(projectId, viewerId)));
-  return row?.status === "succeeded" ? row.url : null;
+  if (row?.status !== "succeeded" || !row.url) return null;
+  return { url: row.url, filmTitle: row.filmTitle, shotNumber: row.ordinal + 1 };
 }
 
 type AssetRow = typeof assets.$inferSelect;

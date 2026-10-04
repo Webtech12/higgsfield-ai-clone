@@ -43,6 +43,14 @@ test("brief to film: storyboard, edit, produce and play", async ({ page }) => {
   });
   await expect(page.getByRole("link", { name: /^Download shot/ })).toHaveCount(3);
 
+  // Downloads stream through our route under a friendly name, not the storage key.
+  const href = await page.getByRole("link", { name: "Download shot 1" }).getAttribute("href");
+  const download = await page.request.get(href ?? "");
+  expect(download.ok()).toBe(true);
+  expect(download.headers()["content-disposition"]).toMatch(
+    /attachment; filename=".+-shot-1\.webm"/,
+  );
+
   // Playback runs the shots back to back.
   await page.getByRole("button", { name: "Play film" }).click();
   await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
