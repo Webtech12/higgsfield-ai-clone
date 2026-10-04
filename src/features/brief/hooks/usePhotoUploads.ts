@@ -36,6 +36,19 @@ async function uploadPhoto(file: File): Promise<Pick<PhotoItem, "status" | "uplo
   }
 }
 
+/** A new photo's first state: uploading, or failed at once if it isn't a usable type. */
+function pendingItem(key: string, role: ReferenceRole, previewUrl: string, file: File): PhotoItem {
+  const isUsable = isAccepted(file);
+  return {
+    key,
+    role,
+    previewUrl,
+    status: isUsable ? "uploading" : "failed",
+    uploadId: null,
+    error: isUsable ? null : UNREADABLE,
+  };
+}
+
 /** Object URLs for local previews: they hold memory until revoked, so every one is released. */
 function usePreviewUrls() {
   const urls = useRef(new Set<string>());
@@ -70,19 +83,9 @@ export function usePhotoUploads(options: { onUploaded?: () => void } = {}) {
   const start = (role: ReferenceRole, file: File) => {
     counter.current += 1;
     const key = `photo-${String(counter.current)}`;
-    const previewUrl = previews.create(file);
-    const isUsable = isAccepted(file);
-    const status: PhotoStatus = isUsable ? "uploading" : "failed";
-    const item = {
-      key,
-      role,
-      previewUrl,
-      status,
-      uploadId: null,
-      error: isUsable ? null : UNREADABLE,
-    };
+    const item = pendingItem(key, role, previews.create(file), file);
     setItems((current) => [...current, item]);
-    if (!isUsable) return;
+    if (item.status !== "uploading") return;
     void uploadPhoto(file).then((result) => {
       setItems((current) => current.map((i) => (i.key === key ? { ...i, ...result } : i)));
       if (result.status === "ready") options.onUploaded?.();
