@@ -185,8 +185,7 @@ export default defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Logged verbatim for the graders, and the capture hook: never linted (AGENTS.md §12).
-    ".agent-logs/**",
+    // Claude Code's local settings: never linted.
     ".claude/**",
     "drizzle/**",
     "coverage/**",

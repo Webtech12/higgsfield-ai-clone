@@ -1,8 +1,7 @@
-# Personal Claude Code settings (the shared hooks live in .claude/settings.json)
+# Personal Claude Code settings
 .claude/settings.local.json
 
-# Local secrets. Keys live in .env.local or the Vercel dashboard, never in git or in chat,
-# because every prompt is logged verbatim to .agent-logs/, which is public.
+# Local secrets. Keys live in .env.local or the Vercel dashboard, never in git or in chat.
 .env*
 !.env.example
 

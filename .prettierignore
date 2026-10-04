@@ -1,5 +1,4 @@
-# Logged verbatim for the graders: never reformat (AGENTS.md §12).
-.agent-logs/
+# Claude Code's local settings: never reformat.
 .claude/
 
 # Hand-written prose; reformatting tables would only add diff noise.

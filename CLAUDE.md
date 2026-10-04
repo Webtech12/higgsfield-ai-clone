@@ -9,9 +9,8 @@ If you cannot see its contents, stop and read `AGENTS.md` before doing anything 
 ## Claude Code specifics
 
 - **Plan per slice.** Follow `docs/plan.md`. Post each slice's plan (files, responsibilities, tests) as a
-  chat message, not in plan mode: plan-mode plans and approvals never reach `.agent-logs/`. Wait for the
-  user's typed approval, then build the whole slice. Ask any decision that belongs to the user through
-  AskUserQuestion popups.
+  chat message, wait for the user's typed approval, then build the whole slice. Ask any decision that
+  belongs to the user through AskUserQuestion popups.
 - **Stay in scope.** Do exactly the task asked. If you notice something else worth changing, list it
   at the end as a suggestion instead of doing it.
 - **Verify, don't assume.** After changes, run `npm run lint && npm run typecheck && npm test`, and
@@ -20,7 +19,7 @@ If you cannot see its contents, stop and read `AGENTS.md` before doing anything 
 - **Library APIs.** For Better Auth, Inngest, fal.ai, OpenAI, Drizzle, TanStack Query and Next.js 16, check
   the installed version's docs/types instead of relying on memory. Never invent fal or OpenAI model IDs; use
   only the IDs in the routing module's registry and `DIRECTOR_MODEL`.
-- **Git.** One logical change per commit, Conventional Commit messages, and `.agent-logs/` staged in
-  every commit. Never let a formatter or linter touch `.agent-logs/` or `.claude/`. Never commit secrets
-  or `.env*` files, and never ask for keys in chat: prompts are logged publicly. Never force-push.
+- **Git.** One logical change per commit and Conventional Commit messages. Never let a formatter or
+  linter touch `.claude/`. Never commit secrets or `.env*` files, and never ask for keys in chat.
+  Never force-push.
 - **Summaries.** End each task with: what changed (files), how it was verified, and any follow-ups.

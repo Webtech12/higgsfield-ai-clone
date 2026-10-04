@@ -62,7 +62,7 @@ Soul ID training, marketing studio, a chat agent, real payments, collaboration, 
 | Client data | TanStack Query (server state), `nuqs` (URL state), react-hook-form + zod (forms) |
 | Testing | Vitest, React Testing Library, MSW, Playwright |
 | Observability | pino structured logs. Sentry is deferred ([ADR-018](docs/adr/018-lean-core-for-the-24-hour-build.md)) |
-| Tooling | ESLint (typescript-eslint strict, eslint-plugin-boundaries, jsx-a11y), Prettier, husky, lint-staged, GitHub Actions. Formatters and linters never touch `.agent-logs/` or `.claude/` |
+| Tooling | ESLint (typescript-eslint strict, eslint-plugin-boundaries, jsx-a11y), Prettier, husky, lint-staged, GitHub Actions. Formatters and linters never touch `.claude/` |
 | Hosting | Vercel (app), Neon (DB), Inngest Cloud, Cloudflare R2, Upstash |
 
 Rejected on purpose: a separate Express/Nest API service, Prisma, tRPC/GraphQL, Redux/Zustand,
@@ -141,7 +141,6 @@ tests/
 ├─ integration/                          # real Postgres (Neon test branch)
 └─ e2e/                                  # Playwright, PROVIDERS=fake
 docs/  assignment.md  plan.md  architecture.md  frontend.md  standards.md  adr/  research/
-.agent-logs/                             # agent capture — commit with every commit
 ```
 
 The Better Auth instance and its generated schema live in `server/modules/identity/infrastructure/`.
@@ -285,20 +284,20 @@ With `PROVIDERS=fake`, the LLM, media, storage, rate limiting and email use in-p
 `DATABASE_URL` and `BETTER_AUTH_SECRET` are required.
 
 Only `NEXT_PUBLIC_*` variables may reach the client. Never commit `.env*` files. Keys go in `.env.local` or the
-Vercel dashboard, never in chat: every prompt is logged verbatim to the public `.agent-logs/`.
+Vercel dashboard, never in chat.
 
 ## 12. Working process for agents
 
 1. Read this file first. For module work, also read that module's `index.ts` and the relevant section of `docs/architecture.md`.
 2. **Plan per vertical slice** (`docs/plan.md`): post the slice's plan (files, responsibilities, tests) as a chat
-   message, not in plan mode, whose plans never reach `.agent-logs/`. WAIT for the user's typed approval, then build
+   message. WAIT for the user's typed approval, then build
    the whole slice. Stop early only for a rule conflict, a failing check, or a decision that belongs to the user;
    ask those through AskUserQuestion popups.
 3. Build inside-out within a slice: contracts → domain (+ tests) → ports → application (+ tests with fakes) → infrastructure/integrations → delivery → UI. Deploy at the end of every slice.
 4. Use `PROVIDERS=fake` for all UI work. Real providers only at integration checkpoints.
 5. Before declaring done: `npm run lint && npm run typecheck && npm test` must pass.
 6. Use Conventional Commits (`feat(production): …`, `fix(credits): …`, `docs(adr): …`).
-   Commit `.agent-logs/` together with the code, in every commit. Never let a formatter or linter touch `.agent-logs/` or `.claude/`.
+   Never let a formatter or linter touch `.claude/`.
 7. Never edit an applied migration. Never weaken a lint rule, type setting or test to make something pass. Raise it instead.
 8. If a requested change conflicts with these rules, say so and propose an alternative rather than silently deviating.
 
@@ -313,7 +312,7 @@ Vercel dashboard, never in chat: every prompt is logged verbatim to the public `
 - [ ] Loading / empty / error / success states designed; keyboard + screen-reader friendly
 - [ ] Works on mobile width and in an incognito window (guest flow)
 - [ ] Deployed, and the live link works for someone who is not signed in
-- [ ] Lint, typecheck and tests green; Conventional Commit; `.agent-logs/` committed
+- [ ] Lint, typecheck and tests green; Conventional Commit
 
 <!-- BEGIN:nextjs-agent-rules -->
 

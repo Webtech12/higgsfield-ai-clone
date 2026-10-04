@@ -61,10 +61,10 @@ Your camera is on in the walkthrough, and it is under five minutes.
 |---|---|---|
 | Use the product end to end, with screenshots, before writing code | A teardown of higgsfield.ai's flows, with screenshots | `docs/research/` (slice 0, before any app code) |
 | Not a 1:1 clone; show how you approach the problem | Director reorganises Higgsfield around creative intent (brief → directions → storyboard → shots) instead of model selection, with its own visual language | [`AGENTS.md` §1](../AGENTS.md), `docs/research/` |
-| Capture prompts and responses before building; commit `.agent-logs/` as you go | Claude Code hooks log every prompt and final response; logs are staged in every commit | [`CAPTURE-TEST.md`](../CAPTURE-TEST.md), [`.claude/settings.json`](../.claude/settings.json) |
+| Capture prompts and responses before building; commit `.agent-logs/` as you go | Claude Code hooks logged every prompt and final response, staged in every commit, until the capture was removed on 2026-10-04 at the user's request | git history up to that date |
 | A live link, deployed and open | Vercel deployment, first deployed early in the build | `docs/plan.md`, slice 1 |
 | The live link opens for someone who is not signed in | No login wall. A guest identity is created on the first brief, and a seeded demo project shows finished output straight away | [`AGENTS.md` §5](../AGENTS.md), `docs/plan.md` |
-| A public repository with `.agent-logs/` in it | Public GitHub repository; logs committed alongside the code they produced | `docs/plan.md`, slice 1 |
+| A public repository with `.agent-logs/` in it | Public GitHub repository; logs were committed alongside the code they produced, and remain in git history | `docs/plan.md`, slice 1 |
 | A walkthrough of five minutes or less, camera on | Recorded by the candidate; a script is drafted in the final slice | `docs/plan.md`, final slice |
 | Judged on speed | Vertical slices, the first deploy early, and a lean core: infrastructure ceremony that doesn't protect users or spend is deferred | `docs/plan.md` |
 | Judged on product judgement | An explicit out-of-scope list, a cut list with an order, and the teardown's reasoning | [`AGENTS.md` §1](../AGENTS.md), `docs/plan.md`, `docs/research/` |

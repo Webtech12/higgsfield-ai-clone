@@ -38,7 +38,7 @@ Never cut:
 
 ## Accounts, in the order they are needed
 
-Keys go in `.env.local` and the Vercel dashboard, **never in chat**: every prompt is logged verbatim to the public `.agent-logs/`.
+Keys go in `.env.local` and the Vercel dashboard, **never in chat**.
 
 1. **S1:** GitHub (an empty public repo), Vercel (import the repo), Neon (a project plus a `test` branch).
 2. **S4:** OpenAI (a key with a usage limit), fal (a key with a spend limit), Cloudflare R2 (a bucket with r2.dev public access and an S3 API token), Inngest (the Vercel integration), Upstash Redis.
@@ -48,4 +48,5 @@ Keys go in `.env.local` and the Vercel dashboard, **never in chat**: every promp
 
 - [ ] The live link opens for somebody who is not signed in
 - [ ] The repository is public, with `.agent-logs/` in it, and a final logs commit after the last session
+  (agent logging was removed on 2026-10-04 at the user's request; the logs remain in git history)
 - [ ] The walkthrough is under five minutes, camera on; the live link and the repository are labelled in the links field

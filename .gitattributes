@@ -1,6 +1,2 @@
 # LF everywhere, so Windows, CI and Vercel see identical bytes (Prettier writes LF).
 * text=auto eol=lf
-
-# Agent logs are committed byte-for-byte: no CRLF conversion on Windows checkouts.
-# This rule comes after the one above, so it wins for the logs.
-.agent-logs/** -text
