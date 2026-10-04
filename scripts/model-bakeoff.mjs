@@ -8,8 +8,8 @@
 //   npm run bakeoff -- videos <frame id>      6 video models from one start frame (a shot-A frame)
 //   npm run bakeoff -- music                  4 music models, 15 seconds each
 //   npm run bakeoff -- cut <clip> <clip> <clip> [music id]
-//                                             joins three clips, lays the music under them and
-//                                             overlays a headline and a call to action
+//                                             joins three clips and an end card (headline and call
+//                                             to action), then lays the music under them
 //   npm run bakeoff -- page                   writes bakeoff/index.html to compare everything
 //
 // Prices are fal's list prices (pricing API, 2026-10-04) for the exact settings used here.
