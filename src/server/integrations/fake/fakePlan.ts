@@ -2,7 +2,7 @@ import type { AspectRatio, StyleTag } from "@/contracts/brief";
 import type { DirectorPlan, PlannedDirection } from "@/contracts/plan";
 import type { CameraMove, ShotDuration } from "@/contracts/project";
 
-import { hashString, pick } from "./hash";
+import { hashString, pick } from "../hash";
 
 /**
  * A believable plan without an LLM: three archetypal directions, each telling the idea in three

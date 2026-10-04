@@ -1,6 +1,6 @@
 import type { AspectRatio } from "@/contracts/brief";
 
-import { hashString, pick } from "./hash";
+import { hashString, pick } from "../hash";
 
 /**
  * Draws a placeholder storyboard frame as SVG: a graded backdrop, a horizon, a subject silhouette and

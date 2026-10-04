@@ -1,17 +1,22 @@
+import { z } from "zod";
+
+import { AspectRatio } from "@/contracts/brief";
+import { AssetKind } from "@/contracts/project";
 import type { GenerationRequest, MediaProvider, ProviderStatus } from "@/server/modules/production";
 
-import { hashString } from "./hash";
+import { hashString } from "../hash";
 
 /** Everything the fake needs is encoded in the request id, so it works across server instances. */
-interface FakeTicket {
-  kind: GenerationRequest["kind"];
-  seed: string;
-  ratio: GenerationRequest["aspectRatio"];
-  title: string;
-  subtitle: string;
-  createdAt: number;
-  fail: boolean;
-}
+const FakeTicket = z.object({
+  kind: AssetKind,
+  seed: z.string(),
+  ratio: AspectRatio,
+  title: z.string(),
+  subtitle: z.string(),
+  createdAt: z.number(),
+  fail: z.boolean(),
+});
+type FakeTicket = z.infer<typeof FakeTicket>;
 
 const LATENCY_MS = { frame: [2500, 5000], video: [9000, 14000] } as const;
 
@@ -19,8 +24,16 @@ const LATENCY_MS = { frame: [2500, 5000], video: [9000, 14000] } as const;
 export const FAKE_FAILURE_MARKER = "FAIL_ME";
 
 const encode = (ticket: FakeTicket) => Buffer.from(JSON.stringify(ticket)).toString("base64url");
-const decode = (requestId: string) =>
-  JSON.parse(Buffer.from(requestId, "base64url").toString("utf8")) as FakeTicket;
+
+/** The ticket behind a request id we issued, or null for anything else. */
+function decode(requestId: string): FakeTicket | null {
+  try {
+    const json: unknown = JSON.parse(Buffer.from(requestId, "base64url").toString("utf8"));
+    return FakeTicket.safeParse(json).data ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export class FakeMediaProvider implements MediaProvider {
   constructor(private readonly now: () => number = Date.now) {}
@@ -40,6 +53,8 @@ export class FakeMediaProvider implements MediaProvider {
 
   status(requestId: string): Promise<ProviderStatus> {
     const ticket = decode(requestId);
+    // Like a real provider's 404: an id we never issued is an error, never a status.
+    if (!ticket) return Promise.reject(new Error("The fake provider never issued this request"));
     const [min, max] = LATENCY_MS[ticket.kind];
     const latency = min + (hashString(ticket.seed) % (max - min));
     const elapsed = this.now() - ticket.createdAt;

@@ -1,16 +1,21 @@
 import "server-only";
 
+import { VercelBlobStorage } from "@/server/integrations/blob/VercelBlobStorage";
+import { FalMediaProvider } from "@/server/integrations/fal/FalMediaProvider";
 import { FakeLLMProvider, FakeMediaProvider } from "@/server/integrations/fake";
 import { InMemoryRateLimiter } from "@/server/integrations/fake/InMemoryRateLimiter";
 import { PassThroughStorage } from "@/server/integrations/fake/PassThroughStorage";
+import { OpenAILLMProvider } from "@/server/integrations/openai/OpenAILLMProvider";
+import { UpstashRateLimiter } from "@/server/integrations/upstash/UpstashRateLimiter";
 import { createCreditsModule } from "@/server/modules/credits";
-import { createDirectorModule } from "@/server/modules/director";
-import { createLimitsModule } from "@/server/modules/limits";
-import { createMediaModule } from "@/server/modules/media";
-import { createProductionModule } from "@/server/modules/production";
+import { createDirectorModule, type LLMProvider } from "@/server/modules/director";
+import { createLimitsModule, type RateLimiter } from "@/server/modules/limits";
+import { createMediaModule, type ObjectStorage } from "@/server/modules/media";
+import { createProductionModule, type MediaProvider } from "@/server/modules/production";
 import { createProjectsModule } from "@/server/modules/projects";
-import { createRoutingModule } from "@/server/modules/routing";
+import { createRoutingModule, type ProviderName } from "@/server/modules/routing";
 import { createStoryboardModule } from "@/server/modules/storyboard";
+import { LLM_POLICY, STORAGE_POLICY } from "@/server/platform/config/resilience";
 import { createUnitOfWork, getDb } from "@/server/platform/db";
 import { getEnv, type Env } from "@/server/platform/env";
 import { newId } from "@/server/platform/ids";
@@ -18,33 +23,27 @@ import { createOnboarding } from "@/server/processes/onboarding";
 
 /**
  * The composition root: the only place concrete classes are constructed (AGENTS.md §6). Built on first
- * use, so importing a route never needs configuration at build time. Real providers arrive in S4;
- * until then PROVIDERS=real fails loudly here rather than silently using fakes.
+ * use, so importing a route never needs configuration at build time.
  */
 function build() {
   const env = getEnv();
-  if (env.PROVIDERS === "real") {
-    throw new Error(
-      "Real providers are wired up in S4 (docs/plan.md); use PROVIDERS=fake for now.",
-    );
-  }
-
+  const adapter = adapters(env);
   const db = getDb();
   const uow = createUnitOfWork(db);
-  const routing = createRoutingModule({ provider: "fake" });
-  const media = createMediaModule({ storage: new PassThroughStorage() });
+  const routing = createRoutingModule({ provider: adapter.provider });
+  const media = createMediaModule({ storage: adapter.storage });
   const credits = createCreditsModule({ db });
   const limits = createLimitsModule({
     db,
-    rateLimiter: new InMemoryRateLimiter(),
+    rateLimiter: adapter.rateLimiter,
     policy: capPolicy(env),
   });
   const projects = createProjectsModule({ db, newId });
-  const director = createDirectorModule({ llm: new FakeLLMProvider(), projects });
+  const director = createDirectorModule({ llm: adapter.llm, projects });
   const production = createProductionModule({
     db,
     uow,
-    provider: new FakeMediaProvider(),
+    provider: adapter.media,
     routing,
     media,
     projects,
@@ -63,6 +62,7 @@ function build() {
   return {
     db,
     routing,
+    media,
     projects,
     credits,
     limits,
@@ -71,6 +71,41 @@ function build() {
     production: production.api,
     storyboard: storyboard.api,
     workflows: [...director.workflows, ...production.workflows, ...storyboard.workflows],
+  };
+}
+
+interface Adapters {
+  provider: ProviderName;
+  llm: LLMProvider;
+  media: MediaProvider;
+  storage: ObjectStorage;
+  rateLimiter: RateLimiter;
+}
+
+/** The adapter behind each port: in-process fakes, or the real providers (AGENTS.md §11). */
+function adapters(env: Env): Adapters {
+  if (env.PROVIDERS === "fake") {
+    return {
+      provider: "fake",
+      llm: new FakeLLMProvider(),
+      media: new FakeMediaProvider(),
+      storage: new PassThroughStorage(),
+      rateLimiter: new InMemoryRateLimiter(),
+    };
+  }
+  return {
+    provider: "fal",
+    llm: new OpenAILLMProvider({
+      apiKey: env.OPENAI_API_KEY,
+      model: env.DIRECTOR_MODEL,
+      ...LLM_POLICY,
+    }),
+    media: new FalMediaProvider(env.FAL_KEY),
+    storage: new VercelBlobStorage({ token: env.BLOB_READ_WRITE_TOKEN, ...STORAGE_POLICY }),
+    rateLimiter: new UpstashRateLimiter({
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
+    }),
   };
 }
 

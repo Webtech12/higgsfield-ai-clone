@@ -37,11 +37,8 @@ const RealEnv = z.object({
   FAL_KEY: z.string().min(1),
   INNGEST_EVENT_KEY: z.string().min(1),
   INNGEST_SIGNING_KEY: z.string().min(1),
-  R2_ACCOUNT_ID: z.string().min(1),
-  R2_ACCESS_KEY_ID: z.string().min(1),
-  R2_SECRET_ACCESS_KEY: z.string().min(1),
-  R2_BUCKET: z.string().min(1),
-  R2_PUBLIC_BASE_URL: z.url(),
+  // Vercel Blob (ADR-023): injected when the Blob store is connected to the Vercel project.
+  BLOB_READ_WRITE_TOKEN: z.string().min(1),
   UPSTASH_REDIS_REST_URL: z.url(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
 });

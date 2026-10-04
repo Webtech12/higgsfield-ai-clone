@@ -9,8 +9,10 @@ import tseslint from "typescript-eslint";
 // Each group names the packages and where they may be imported. A later block replaces the rule
 // for the files it matches, so the most specific folders come last.
 
+// Anchored to the package name: a gitignore-style "openai/*" would also match our own
+// integrations/openai/ folder.
 const VENDOR_SDKS = {
-  group: ["@fal-ai/*", "openai", "openai/*", "@aws-sdk/*", "@upstash/*", "resend", "resend/*"],
+  regex: "^(@fal-ai/|@aws-sdk/|@upstash/|@vercel/blob($|/)|openai($|/)|resend($|/))",
   message: "Vendor SDKs are imported only in src/server/integrations/** (AGENTS.md §6).",
 };
 const DRIZZLE = {

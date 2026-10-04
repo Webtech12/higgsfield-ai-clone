@@ -15,10 +15,30 @@ export interface ModelEntry {
 }
 
 /**
- * The one home for models, capabilities and prices (AGENTS.md §8). Real fal entries are added at the
- * first real-provider run, with IDs and prices approved by the user; until then only fakes exist.
+ * The one home for models, capabilities and prices (AGENTS.md §8). The fal entries were approved by
+ * the user at the first real-provider run, with IDs and prices checked against fal's model and
+ * pricing APIs. Provider costs are estimates for the kill-switch, rounded up so it errs high.
  */
 export const MODEL_REGISTRY: readonly ModelEntry[] = [
+  {
+    // $0.03 per image. Frames are 1280×720 (or 720×1280, 960×960): Seedream's smallest size,
+    // which keeps the Board light.
+    id: "fal-ai/bytedance/seedream/v4/text-to-image",
+    provider: "fal",
+    kind: "frame",
+    creditCost: 0,
+    providerCostCents: 3,
+    reason: "Seedream 4.0: cinematic stills the video model animates from",
+  },
+  {
+    // $1 per million tokens; a 720p shot is about $0.09 (4 s) to $0.17 (8 s).
+    id: "fal-ai/bytedance/seedance/v1/lite/image-to-video",
+    provider: "fal",
+    kind: "video",
+    creditCost: 10,
+    providerCostCents: 18,
+    reason: "Seedance 1.0 Lite: every shot length from 2 to 12 s, in every aspect ratio",
+  },
   {
     id: "fake/storyboard-frame",
     provider: "fake",
