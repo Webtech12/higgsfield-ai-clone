@@ -9,6 +9,7 @@
     "dev": "next dev",
     "inngest:dev": "inngest-cli dev --no-discovery -u http://localhost:3000/api/inngest",
     "build": "next build",
+    "vercel-build": "node scripts/migrate-on-deploy.mjs && next build",
     "start": "next start",
     "lint": "next typegen && eslint .",
     "typecheck": "next typegen && tsc --noEmit",
