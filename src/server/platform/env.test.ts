@@ -29,6 +29,23 @@ describe("parseEnv", () => {
     expect(() => parseEnv({ ...minimal, PROVIDERS: "real" })).toThrow(/OPENAI_API_KEY/);
   });
 
+  it("accepts either Blob credential in real mode, and names it when both are missing", () => {
+    const real = {
+      ...minimal,
+      PROVIDERS: "real",
+      OPENAI_API_KEY: "test",
+      FAL_KEY: "test",
+      INNGEST_EVENT_KEY: "test",
+      INNGEST_SIGNING_KEY: "test",
+      UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
+      UPSTASH_REDIS_REST_TOKEN: "test",
+    };
+
+    expect(() => parseEnv({ ...real, BLOB_READ_WRITE_TOKEN: "test" })).not.toThrow();
+    expect(() => parseEnv({ ...real, BLOB_STORE_ID: "store_test" })).not.toThrow();
+    expect(() => parseEnv(real)).toThrow(/BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID/);
+  });
+
   it("names the invalid variable without echoing its value", () => {
     const secret = "short-secret-value";
 

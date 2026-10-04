@@ -14,8 +14,10 @@ public-bucket settings. The user asked for a free resource instead, with the dea
 ## Decision
 
 Store media in **Vercel Blob** (`@vercel/blob`) with public access. The store is created from the
-Vercel project's Storage tab, which injects `BLOB_READ_WRITE_TOKEN`. Objects are served from
-Vercel's CDN at `*.public.blob.vercel-storage.com`.
+Vercel project's Storage tab, and connecting it injects `BLOB_READ_WRITE_TOKEN` and `BLOB_STORE_ID`.
+Either is enough: the app passes the token when there is one, otherwise the store id, which the SDK
+pairs with Vercel's OIDC token (so it only works on Vercel). Objects are served from Vercel's CDN at
+`*.public.blob.vercel-storage.com`.
 
 - Keys stay `p/{projectId}/{assetId}.{ext}`: random ids keep them unguessable.
 - Writes set `allowOverwrite`, so a retried persist step is idempotent.

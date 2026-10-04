@@ -37,13 +37,24 @@ const RealEnv = z.object({
   FAL_KEY: z.string().min(1),
   INNGEST_EVENT_KEY: z.string().min(1),
   INNGEST_SIGNING_KEY: z.string().min(1),
-  // Vercel Blob (ADR-023): injected when the Blob store is connected to the Vercel project.
-  BLOB_READ_WRITE_TOKEN: z.string().min(1),
+  // Vercel Blob (ADR-023). Connecting the store to the Vercel project sets a read-write token, or a
+  // store id that the SDK pairs with Vercel's OIDC token. Either one is enough (checked below).
+  BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
+  BLOB_STORE_ID: z.string().min(1).optional(),
   UPSTASH_REDIS_REST_URL: z.url(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
 });
 
-const EnvSchema = z.discriminatedUnion("PROVIDERS", [FakeEnv, RealEnv]);
+const EnvSchema = z.discriminatedUnion("PROVIDERS", [FakeEnv, RealEnv]).superRefine((env, ctx) => {
+  if (env.PROVIDERS === "real" && !env.BLOB_READ_WRITE_TOKEN && !env.BLOB_STORE_ID) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["BLOB_READ_WRITE_TOKEN"],
+      message:
+        "Connect the Blob store to the project: it sets BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID",
+    });
+  }
+});
 export type Env = z.infer<typeof EnvSchema>;
 
 /** Treats `KEY=` lines in .env files as unset, and defaults PROVIDERS to fake. */

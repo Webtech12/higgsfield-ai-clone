@@ -1,6 +1,9 @@
 import "server-only";
 
-import { VercelBlobStorage } from "@/server/integrations/blob/VercelBlobStorage";
+import {
+  VercelBlobStorage,
+  type BlobCredentials,
+} from "@/server/integrations/blob/VercelBlobStorage";
 import { FalMediaProvider } from "@/server/integrations/fal/FalMediaProvider";
 import { FakeLLMProvider, FakeMediaProvider } from "@/server/integrations/fake";
 import { InMemoryRateLimiter } from "@/server/integrations/fake/InMemoryRateLimiter";
@@ -101,12 +104,23 @@ function adapters(env: Env): Adapters {
       ...LLM_POLICY,
     }),
     media: new FalMediaProvider(env.FAL_KEY),
-    storage: new VercelBlobStorage({ token: env.BLOB_READ_WRITE_TOKEN, ...STORAGE_POLICY }),
+    storage: new VercelBlobStorage({
+      credentials: blobCredentials(env.BLOB_READ_WRITE_TOKEN, env.BLOB_STORE_ID),
+      ...STORAGE_POLICY,
+    }),
     rateLimiter: new UpstashRateLimiter({
       url: env.UPSTASH_REDIS_REST_URL,
       token: env.UPSTASH_REDIS_REST_TOKEN,
     }),
   };
+}
+
+/** A read-write token if there is one, else the store id for Vercel's OIDC auth (ADR-023). */
+function blobCredentials(token: string | undefined, storeId: string | undefined): BlobCredentials {
+  if (token) return { token };
+  if (storeId) return { storeId };
+  // env.ts already refuses real mode without either; this keeps the types honest.
+  throw new Error("Vercel Blob needs BLOB_READ_WRITE_TOKEN or BLOB_STORE_ID");
 }
 
 /** Video caps and the global daily kill-switch, from the environment (AGENTS.md §1). */
