@@ -1,1 +1,1 @@
-export { getWorkspaceVersion, getWorkspaceView } from "./workspace";
+export { getFinishedAssetUrl, getWorkspaceVersion, getWorkspaceView } from "./workspace";

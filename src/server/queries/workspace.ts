@@ -37,6 +37,21 @@ export async function getWorkspaceVersion(
   return `${String(row.version)}-${String(row.assetsAt?.getTime() ?? 0)}`;
 }
 
+/** A finished asset's public URL, if the viewer may see its project (theirs, or the public demo). */
+export async function getFinishedAssetUrl(
+  db: Reader,
+  projectId: string,
+  assetId: string,
+  viewerId: string | null,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ url: assets.url, status: assets.status })
+    .from(assets)
+    .innerJoin(projects, eq(projects.id, assets.projectId))
+    .where(and(eq(assets.id, assetId), canView(projectId, viewerId)));
+  return row?.status === "succeeded" ? row.url : null;
+}
+
 type AssetRow = typeof assets.$inferSelect;
 
 const toAssetView = (row: AssetRow): AssetView => ({

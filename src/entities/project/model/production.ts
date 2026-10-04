@@ -1,5 +1,6 @@
 import type { AspectRatio } from "@/contracts/brief";
 import type { ShotView, WorkspaceView } from "@/contracts/project";
+import { apiUrl } from "@/shared/lib/apiClient";
 
 import { ASSET_STATUS_META, type Tone } from "./statusMeta";
 import { CAMERA_MOVE_LABEL, frameState } from "./viewModels";
@@ -10,12 +11,14 @@ export type VideoState =
   | { kind: "waiting" }
   | { kind: "rendering" }
   | { kind: "failed"; assetId: string }
-  | { kind: "ready"; url: string };
+  | { kind: "ready"; url: string; assetId: string };
 
 export function videoState(shot: ShotView): VideoState {
   const { video } = shot;
   if (!video) return { kind: "waiting" };
-  if (video.status === "succeeded" && video.url) return { kind: "ready", url: video.url };
+  if (video.status === "succeeded" && video.url) {
+    return { kind: "ready", url: video.url, assetId: video.id };
+  }
   if (video.status === "failed") return { kind: "failed", assetId: video.id };
   return { kind: "rendering" };
 }
@@ -72,8 +75,8 @@ export interface FilmShot {
   posterUrl: string | null;
   video: VideoState;
   status: { label: string; tone: Tone };
-  /** A filename for the download link, once the video exists. */
-  downloadName: string | null;
+  /** Once the video exists: a same-origin link that downloads it, and a friendly filename. */
+  download: { href: string; filename: string } | null;
 }
 
 export interface Film {
@@ -95,12 +98,12 @@ export function toFilm(view: WorkspaceView): Film {
     directionName: direction?.name ?? "",
     aspectRatio: view.aspectRatio,
     canManage: view.isOwner && !view.isDemo,
-    shots: (direction?.shots ?? []).map((shot, index) => toFilmShot(view.title, shot, index + 1)),
+    shots: (direction?.shots ?? []).map((shot, index) => toFilmShot(view, shot, index + 1)),
     progress: productionProgress(view),
   };
 }
 
-function toFilmShot(filmTitle: string, shot: ShotView, number: number): FilmShot {
+function toFilmShot(view: WorkspaceView, shot: ShotView, number: number): FilmShot {
   const frame = frameState(shot);
   const video = videoState(shot);
   return {
@@ -113,7 +116,15 @@ function toFilmShot(filmTitle: string, shot: ShotView, number: number): FilmShot
     posterUrl: frame.kind === "ready" ? frame.url : null,
     video,
     status: shot.video ? ASSET_STATUS_META[shot.video.status] : WAITING_STATUS,
-    downloadName: video.kind === "ready" ? downloadName(filmTitle, number, video.url) : null,
+    download:
+      video.kind === "ready"
+        ? {
+            href: apiUrl(
+              `/projects/${encodeURIComponent(view.id)}/assets/${encodeURIComponent(video.assetId)}/download`,
+            ),
+            filename: downloadName(view.title, number, video.url),
+          }
+        : null,
   };
 }
 

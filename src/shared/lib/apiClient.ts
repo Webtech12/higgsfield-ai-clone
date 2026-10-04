@@ -24,6 +24,9 @@ export class ApiError extends Error {
   }
 }
 
+/** The one home of the API's base path, for requests and for plain links (e.g. downloads). */
+export const apiUrl = (path: string): string => `/api/v1${path}`;
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH";
   body?: unknown;
@@ -36,7 +39,7 @@ export async function apiRequest<T>(
   schema: ZodType<T>,
   { method = "GET", body, headers = {} }: RequestOptions = {},
 ): Promise<T> {
-  const response = await fetch(`/api/v1${path}`, {
+  const response = await fetch(apiUrl(path), {
     method,
     headers: { ...(body === undefined ? {} : { "Content-Type": "application/json" }), ...headers },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -51,7 +54,7 @@ export async function apiGetIfChanged<T>(
   schema: ZodType<T>,
   etag: string | null,
 ): Promise<{ data: T; etag: string | null } | null> {
-  const response = await fetch(`/api/v1${path}`, {
+  const response = await fetch(apiUrl(path), {
     headers: etag ? { "If-None-Match": etag } : {},
     cache: "no-store",
   });

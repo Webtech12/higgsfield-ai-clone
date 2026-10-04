@@ -29,6 +29,7 @@ describe("videoState", () => {
     expect(videoState(shot({ video: video("succeeded", "/v.webm") }))).toEqual({
       kind: "ready",
       url: "/v.webm",
+      assetId: "ast_video_succeeded",
     });
   });
 });
@@ -85,13 +86,17 @@ describe("toFilm", () => {
       recipe: "Dolly in · 5s",
       posterUrl: "/frame.svg",
       status: { label: "Ready", tone: "success" },
-      downloadName: "the-keeper-shot-1.webm",
+      // Same-origin, so the `download` attribute works; the route redirects to the stored file.
+      download: {
+        href: "/api/v1/projects/prj_1/assets/ast_video_succeeded/download",
+        filename: "the-keeper-shot-1.webm",
+      },
     });
     expect(film.shots[1]).toMatchObject({
       number: 2,
       recipe: "Crash zoom · 8s",
       status: { label: "Waiting", tone: "muted" },
-      downloadName: null,
+      download: null,
     });
   });
 

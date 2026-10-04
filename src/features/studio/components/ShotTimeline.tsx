@@ -103,11 +103,11 @@ function ShotDetails({
       <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
         {shot.description}
       </p>
-      {shot.video.kind === "ready" && shot.downloadName ? (
+      {shot.download ? (
         <Button asChild variant="ghost" size="sm" className="mt-1 -ml-3">
           <a
-            href={shot.video.url}
-            download={shot.downloadName}
+            href={shot.download.href}
+            download={shot.download.filename}
             aria-label={`Download shot ${String(shot.number)}`}
           >
             <Download aria-hidden /> Download
