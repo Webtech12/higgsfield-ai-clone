@@ -7,7 +7,7 @@ import type { Film, FilmShot } from "@/entities/project";
 import { spendCheck, useMe, type SpendCheck } from "@/entities/viewer";
 import { errorMessage } from "@/shared/lib/apiErrors";
 import { cn } from "@/shared/lib/cn";
-import { ASPECT_CLASS, Button, StatusBadge } from "@/shared/ui";
+import { ASPECT_CLASS, Button, FadeInImage, StatusBadge } from "@/shared/ui";
 
 import { useRetryAsset } from "../hooks/useRetryAsset";
 
@@ -61,9 +61,7 @@ export function ShotTimeline({
               )}
             >
               {shot.posterUrl ? (
-                // Plain <img>: a storyboard still from our own origin or bucket.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={shot.posterUrl} alt="" className="size-full object-cover" />
+                <FadeInImage src={shot.posterUrl} alt="" className="size-full object-cover" />
               ) : null}
             </button>
             <ShotDetails shot={shot} canRetry={film.canManage} retry={retry} spend={spend} />

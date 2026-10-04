@@ -3,7 +3,7 @@ import { ImageOff, LoaderCircle } from "lucide-react";
 import type { AspectRatio } from "@/contracts/brief";
 import type { FrameState } from "@/entities/project";
 import { cn } from "@/shared/lib/cn";
-import { ASPECT_CLASS } from "@/shared/ui";
+import { ASPECT_CLASS, FadeInImage } from "@/shared/ui";
 
 /** One storyboard frame with its designed waiting, drawing, failed and ready states. */
 export function FrameImage({
@@ -23,15 +23,10 @@ export function FrameImage({
       )}
     >
       {state.kind === "ready" ? (
-        // Plain <img>: frames are small storyboard stills from our own origin or bucket.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <FadeInImage
           src={state.url}
           alt={alt}
-          className={cn(
-            "size-full object-cover transition-opacity",
-            state.isRedrawing && "opacity-40",
-          )}
+          className={cn("size-full object-cover", state.isRedrawing && "brightness-50")}
         />
       ) : null}
       <FrameOverlay state={state} />
