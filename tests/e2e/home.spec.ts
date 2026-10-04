@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("a signed-out visitor lands on the ad brief", async ({ page }) => {
   const consoleErrors: string[] = [];

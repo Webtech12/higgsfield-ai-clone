@@ -12,6 +12,7 @@ import type { TalentCardModel } from "@/entities/talent";
 import { useRefreshMe } from "@/entities/viewer";
 import { apiRequest } from "@/shared/lib/apiClient";
 import { errorMessage } from "@/shared/lib/apiErrors";
+import { ensureSession } from "@/shared/lib/session";
 
 import { usePhotoUploads } from "../hooks/usePhotoUploads";
 import { BRIEF_DEFAULTS, needsTalent } from "../model/briefForm";
@@ -45,8 +46,10 @@ export function AdBriefComposer({ roster }: { roster: TalentCardModel[] }) {
   }, [form, photos.references]);
 
   const create = useMutation({
-    mutationFn: (brief: AdBriefInput) =>
-      apiRequest("/projects", CreateProjectResponse, { method: "POST", body: brief }),
+    mutationFn: async (brief: AdBriefInput) => {
+      await ensureSession();
+      return apiRequest("/projects", CreateProjectResponse, { method: "POST", body: brief });
+    },
     onSuccess: ({ projectId }) => {
       void refreshMe();
       router.push(`/p/${projectId}`);

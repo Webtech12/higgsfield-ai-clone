@@ -15,13 +15,12 @@ export async function getCurrentUser(headers: Headers): Promise<Viewer | null> {
 }
 
 /**
- * Returns the current viewer, creating a guest if there is none. Called only on the first meaningful
- * action (submitting a brief), never on page load, so crawlers don't create rows (AGENTS.md §5).
- * The session cookie is set on the response by Better Auth's nextCookies plugin.
+ * Makes a new guest and signs them in (AGENTS.md §5). Only the guestAccess process calls this, after
+ * checking the network's free trial (ADR-027): Better Auth's own HTTP route for it is disabled, so
+ * this server call is the one way a guest is made. The session cookie is set on the response by
+ * Better Auth's nextCookies plugin.
  */
-export async function ensureViewer(headers: Headers): Promise<Viewer> {
-  const current = await getCurrentUser(headers);
-  if (current) return current;
+export async function createGuest(headers: Headers): Promise<Viewer> {
   const created = await getAuth().api.signInAnonymous({ headers });
   return { id: created.user.id, isGuest: true };
 }

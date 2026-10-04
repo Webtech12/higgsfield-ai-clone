@@ -18,3 +18,10 @@ export const MeView = z.object({
   prices: z.object({ video: z.number().int() }),
 });
 export type MeView = z.infer<typeof MeView>;
+
+/**
+ * POST /api/v1/session: starts the visitor's session before their first upload, Polish with AI or
+ * brief. A new guest is a free trial, one per network a day (ADR-027).
+ */
+export const SessionResponse = z.object({ isGuest: z.boolean() });
+export type SessionResponse = z.infer<typeof SessionResponse>;

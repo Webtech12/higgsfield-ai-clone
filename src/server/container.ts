@@ -12,6 +12,7 @@ import { OpenAILLMProvider } from "@/server/integrations/openai/OpenAILLMProvide
 import { UpstashRateLimiter } from "@/server/integrations/upstash/UpstashRateLimiter";
 import { createCreditsModule } from "@/server/modules/credits";
 import { createDirectorModule, type LLMProvider } from "@/server/modules/director";
+import { createGuest, getCurrentUser } from "@/server/modules/identity";
 import { createLimitsModule, type RateLimiter } from "@/server/modules/limits";
 import { createMediaModule, type ObjectStorage } from "@/server/modules/media";
 import { createProductionModule, type MediaProvider } from "@/server/modules/production";
@@ -24,6 +25,7 @@ import { createUnitOfWork, getDb } from "@/server/platform/db";
 import { getEnv, type Env } from "@/server/platform/env";
 import { newId } from "@/server/platform/ids";
 import { createCreateAd } from "@/server/processes/createAd";
+import { createGuestAccess } from "@/server/processes/guestAccess";
 import { createOnboarding } from "@/server/processes/onboarding";
 
 /**
@@ -73,6 +75,7 @@ function build() {
     limits,
     media,
     onboarding: createOnboarding({ credits }),
+    guestAccess: createGuestAccess({ currentUser: getCurrentUser, createGuest, limits }),
     createAd: createCreateAd({ media, talent, projects }),
     director: director.api,
     production: production.api,

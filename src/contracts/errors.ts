@@ -16,6 +16,8 @@ export const ERROR_CODES = [
   "INSUFFICIENT_CREDITS",
   "LIMIT_REACHED",
   "DAILY_BUDGET_REACHED",
+  "TRIAL_LIMIT_REACHED",
+  "DAILY_ALLOWANCE_REACHED",
   "INTERNAL",
 ] as const;
 export const ErrorCode = z.enum(ERROR_CODES);

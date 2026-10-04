@@ -2,11 +2,15 @@ import { getModules } from "@/server/container";
 import { accepted, handle } from "@/server/platform/http/handler";
 import { assetGenerateRequested, inngest } from "@/server/platform/inngest";
 
+import { networkOf } from "../../../../../_lib/network";
 import { requireViewer } from "../../../../../_lib/viewer";
 
 export const runtime = "nodejs";
 
-/** Redraw one shot's storyboard frame after an edit: free, but rate-limited and behind the kill-switch. */
+/**
+ * Redraw one shot's storyboard frame after an edit: free, but with a daily allowance per network
+ * (ADR-027), an hourly limit per user, and behind the kill-switch.
+ */
 export const POST = handle(
   async (
     request: Request,
@@ -16,6 +20,7 @@ export const POST = handle(
     const viewer = await requireViewer(request);
     const { limits, storyboard } = getModules();
 
+    await limits.assertDailyAllowance("redraw", networkOf(request));
     await limits.assertWithinRate(`redraw:${viewer.id}`, 30, 3600);
     await limits.assertCanGenerate(viewer.id);
     const { assetId } = await storyboard.redrawFrame({ userId: viewer.id, projectId, shotId });

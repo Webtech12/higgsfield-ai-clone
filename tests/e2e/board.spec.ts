@@ -1,10 +1,6 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
-// A 1×1 PNG: enough for the browser to resize and for the server to recognise as a photo.
-const TINY_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
-  "base64",
-);
+import { expect, test, TINY_PNG } from "./fixtures";
 
 async function writeBrief(page: Page) {
   await page.goto("/");

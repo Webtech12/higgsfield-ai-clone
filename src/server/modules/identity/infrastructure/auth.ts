@@ -16,6 +16,10 @@ function createAuth() {
     secret: env.BETTER_AUTH_SECRET,
     baseURL: env.BETTER_AUTH_URL ?? env.NEXT_PUBLIC_APP_URL,
     database: drizzleAdapter(getDb(), { provider: "pg", schema }),
+    // Guests are made only by the server, after the per-network free-trial check (ADR-027). This
+    // closes the public route that would skip it; disabled paths only apply to Better Auth's HTTP
+    // router, so the server's own auth.api.signInAnonymous call still works.
+    disabledPaths: ["/sign-in/anonymous"],
     plugins: [
       // Guests are real users with isAnonymous = true (AGENTS.md §5). The anonymous row is never
       // deleted: its ledger history references it (ADR-019).

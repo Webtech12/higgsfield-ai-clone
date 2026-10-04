@@ -1,6 +1,13 @@
-// limits: caps, the daily spend kill-switch and request rate limits (ADR-016). Public API only.
+// limits: caps, the daily spend kill-switch, per-network allowances (ADR-027) and request rate
+// limits (ADR-016). Public API only.
 import type { Database, Tx } from "@/server/platform/db";
 
+import { TakeAllowance } from "./application/TakeAllowance";
+import {
+  DailyAllowanceReachedError,
+  TrialLimitReachedError,
+  type MeteredAction,
+} from "./domain/allowances";
 import {
   DailyBudgetReachedError,
   LimitReachedError,
@@ -13,12 +20,42 @@ import { UsageRepository } from "./infrastructure/UsageRepository";
 import type { RateLimiter } from "./ports/RateLimiter";
 
 export {
+  DailyAllowanceReachedError,
+  NETWORK_DAILY_ALLOWANCE,
+  TrialLimitReachedError,
+  type MeteredAction,
+} from "./domain/allowances";
+export {
   DailyBudgetReachedError,
   LimitReachedError,
   RateLimitedError,
   type CapPolicy,
 } from "./domain/caps";
+export { networkKeyOf } from "./domain/network";
 export type { RateLimiter } from "./ports/RateLimiter";
+
+/** Per-network allowances (ADR-027): each check uses one of today's, and refuses once it's gone. */
+function networkAllowances(rateLimiter: RateLimiter) {
+  const allowance = new TakeAllowance({ rateLimiter });
+  return {
+    /** Before a new guest is made: one free trial per network a day. */
+    async assertTrialAvailable(network: string): Promise<void> {
+      if (!(await allowance.execute({ action: "trial", network }))) {
+        throw new TrialLimitReachedError("Today's free trial on this network has been used");
+      }
+    },
+
+    /** Before free work that still costs us money: a daily allowance per network. */
+    async assertDailyAllowance(
+      action: Exclude<MeteredAction, "trial">,
+      network: string,
+    ): Promise<void> {
+      if (!(await allowance.execute({ action, network }))) {
+        throw new DailyAllowanceReachedError(`This network has used today's ${action} allowance`);
+      }
+    },
+  };
+}
 
 export function createLimitsModule(deps: {
   db: Database;
@@ -30,6 +67,8 @@ export function createLimitsModule(deps: {
   const now = deps.now ?? (() => new Date());
 
   return {
+    ...networkAllowances(deps.rateLimiter),
+
     /**
      * Counts videos and spend inside the caller's transaction. Throwing rolls back the whole unit of
      * work, so a cap can never be exceeded by two concurrent requests (the upsert locks the row).

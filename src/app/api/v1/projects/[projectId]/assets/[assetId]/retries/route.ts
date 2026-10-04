@@ -3,11 +3,15 @@ import { getModules } from "@/server/container";
 import { accepted, handle } from "@/server/platform/http/handler";
 import { assetGenerateRequested, inngest } from "@/server/platform/inngest";
 
+import { networkOf } from "../../../../../_lib/network";
 import { requireViewer } from "../../../../../_lib/viewer";
 
 export const runtime = "nodejs";
 
-/** Retry a failed frame (free) or video (reserves its price again). */
+/**
+ * Retry a failed frame (free) or video (reserves its price again), within a daily allowance per
+ * network (ADR-027) and an hourly limit per user.
+ */
 export const POST = handle(
   async (
     request: Request,
@@ -17,6 +21,7 @@ export const POST = handle(
     const viewer = await requireViewer(request);
     const { onboarding, limits, production } = getModules();
 
+    await limits.assertDailyAllowance("retry", networkOf(request));
     await limits.assertWithinRate(`retry:${viewer.id}`, 20, 3600);
     await onboarding.ensureStarterCredits(viewer);
     const result = await production.retryAsset({

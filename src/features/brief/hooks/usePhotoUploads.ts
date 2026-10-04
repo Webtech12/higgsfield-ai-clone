@@ -6,6 +6,7 @@ import { REFERENCE_LIMITS, type AdReferenceInput, type ReferenceRole } from "@/c
 import { UPLOAD_CONTENT_TYPES, UploadResponse } from "@/contracts/upload";
 import { ApiError, apiUpload } from "@/shared/lib/apiClient";
 import { errorMessage } from "@/shared/lib/apiErrors";
+import { ensureSession } from "@/shared/lib/session";
 
 import { downscale } from "../lib/downscale";
 
@@ -27,7 +28,7 @@ const isAccepted = (file: File) => (UPLOAD_CONTENT_TYPES as readonly string[]).i
 /** Shrinks and uploads one photo: its upload id, or the reason it failed in the brand's words. */
 async function uploadPhoto(file: File): Promise<Pick<PhotoItem, "status" | "uploadId" | "error">> {
   try {
-    const { blob, filename } = await downscale(file);
+    const [{ blob, filename }] = await Promise.all([downscale(file), ensureSession()]);
     const { uploadId } = await apiUpload("/uploads", UploadResponse, blob, filename);
     return { status: "ready", uploadId, error: null };
   } catch (error) {

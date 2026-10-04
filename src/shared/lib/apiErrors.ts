@@ -22,6 +22,11 @@ export const ERROR_COPY = {
   LIMIT_REACHED: "You've reached today's video limit. Come back tomorrow for more.",
   DAILY_BUDGET_REACHED:
     "Director has used today's generation budget. Explore the demo film, or try again tomorrow.",
+  // Per network, not per person (ADR-027): someone else on the same Wi-Fi may have used it.
+  TRIAL_LIMIT_REACHED:
+    "Today's free trial on this network has been used. Carry on in the browser you started in, or come back tomorrow.",
+  DAILY_ALLOWANCE_REACHED:
+    "You've used today's free allowance for this on your network. Come back tomorrow for more.",
   INTERNAL: "Something went wrong on our side. Please try again.",
 } satisfies Record<ErrorCode, string>;
 

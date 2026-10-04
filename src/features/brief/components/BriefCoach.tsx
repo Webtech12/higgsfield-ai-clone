@@ -14,6 +14,7 @@ import {
 import { useRefreshMe } from "@/entities/viewer";
 import { apiRequest } from "@/shared/lib/apiClient";
 import { errorMessage } from "@/shared/lib/apiErrors";
+import { ensureSession } from "@/shared/lib/session";
 import { Button } from "@/shared/ui";
 
 import { canCoach, toCoachDraft } from "../model/briefForm";
@@ -31,8 +32,10 @@ export function BriefCoach({ form }: { form: UseFormReturn<AdBriefInput> }) {
     name: ["productName", "benefit", "sceneDirection"],
   });
   const coach = useMutation({
-    mutationFn: (draft: CoachDraft) =>
-      apiRequest("/coach", CoachResult, { method: "POST", body: draft }),
+    mutationFn: async (draft: CoachDraft) => {
+      await ensureSession();
+      return apiRequest("/coach", CoachResult, { method: "POST", body: draft });
+    },
     // The first coaching call can be what creates the guest: show their starter credits.
     onSuccess: () => void refreshMe(),
   });
