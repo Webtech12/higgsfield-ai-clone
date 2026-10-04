@@ -13,6 +13,9 @@ export const ERROR_COPY = {
   DIRECTION_ALREADY_SELECTED: "You've already chosen a direction for this film.",
   SHOT_NOT_EDITABLE: "Shots can be edited in your chosen direction, before production starts.",
   ILLEGAL_TRANSITION: "That change is no longer possible. Refresh to see the latest state.",
+  TALENT_UNAVAILABLE: "That talent isn't available any more. Pick someone else from the roster.",
+  UPLOAD_REJECTED:
+    "That photo can't be used. Upload a JPEG, PNG or WebP under 10 MB, then try again.",
   // Viewer-neutral on purpose: the guest sign-in offer (more credits, a higher limit) is a button
   // shown next to these messages, not a promise inside them (AGENTS.md §5).
   INSUFFICIENT_CREDITS: "You don't have enough credits for this.",
