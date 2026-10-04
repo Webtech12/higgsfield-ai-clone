@@ -10,16 +10,16 @@ import { InMemoryRateLimiter } from "@/server/integrations/fake/InMemoryRateLimi
 import { PassThroughStorage } from "@/server/integrations/fake/PassThroughStorage";
 import { OpenAILLMProvider } from "@/server/integrations/openai/OpenAILLMProvider";
 import { UpstashRateLimiter } from "@/server/integrations/upstash/UpstashRateLimiter";
-import { createCreditsModule } from "@/server/modules/credits";
+import { createCreditsModule, type CreditsApi } from "@/server/modules/credits";
 import { createDirectorModule, type LLMProvider } from "@/server/modules/director";
 import { createGuest, getCurrentUser } from "@/server/modules/identity";
-import { createLimitsModule, type RateLimiter } from "@/server/modules/limits";
-import { createMediaModule, type ObjectStorage } from "@/server/modules/media";
+import { createLimitsModule, type LimitsApi, type RateLimiter } from "@/server/modules/limits";
+import { createMediaModule, type MediaApi, type ObjectStorage } from "@/server/modules/media";
 import { createProductionModule, type MediaProvider } from "@/server/modules/production";
-import { createProjectsModule } from "@/server/modules/projects";
+import { createProjectsModule, type ProjectsApi } from "@/server/modules/projects";
 import { createRoutingModule, type ProviderName } from "@/server/modules/routing";
 import { createStoryboardModule } from "@/server/modules/storyboard";
-import { createTalentModule } from "@/server/modules/talent";
+import { createTalentModule, type TalentApi } from "@/server/modules/talent";
 import { LLM_POLICY, STORAGE_POLICY } from "@/server/platform/config/resilience";
 import { createUnitOfWork, getDb } from "@/server/platform/db";
 import { getEnv, type Env } from "@/server/platform/env";
@@ -58,6 +58,7 @@ function build() {
     credits,
     limits,
     director: director.api,
+    talent,
     newId,
   });
   const storyboard = createStoryboardModule({
@@ -74,13 +75,26 @@ function build() {
     credits,
     limits,
     media,
-    onboarding: createOnboarding({ credits }),
-    guestAccess: createGuestAccess({ currentUser: getCurrentUser, createGuest, limits }),
-    createAd: createCreateAd({ media, talent, projects }),
+    ...processes({ credits, limits, media, talent, projects }),
     director: director.api,
     production: production.api,
     storyboard: storyboard.api,
     workflows: [...director.workflows, ...production.workflows, ...storyboard.workflows],
+  };
+}
+
+/** Processes coordinate modules through their public APIs (AGENTS.md §3). */
+function processes(m: {
+  credits: CreditsApi;
+  limits: LimitsApi;
+  media: MediaApi;
+  talent: TalentApi;
+  projects: ProjectsApi;
+}) {
+  return {
+    onboarding: createOnboarding({ credits: m.credits }),
+    guestAccess: createGuestAccess({ currentUser: getCurrentUser, createGuest, limits: m.limits }),
+    createAd: createCreateAd(m),
   };
 }
 

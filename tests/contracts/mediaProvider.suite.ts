@@ -43,6 +43,7 @@ export function describeMediaProviderContract(
   describe(`MediaProvider contract: ${name}`, () => {
     const harness = makeHarness();
     let frameUrl: string | undefined;
+    let referenceFrameUrl: string | undefined;
 
     it(
       "renders a storyboard frame: submit, poll, then a URL",
@@ -67,28 +68,6 @@ export function describeMediaProviderContract(
       harness.timeoutMs,
     );
 
-    it(
-      "animates that frame into a video that starts from it (ADR-017)",
-      async () => {
-        if (!frameUrl) throw new Error("The frame test must pass first: its frame is the input");
-        const { requestId } = await harness.provider.submit({
-          kind: "video",
-          model: harness.videoModel,
-          prompt: "Slow dolly in toward the lighthouse as the beam sweeps across the sea",
-          aspectRatio: "16:9",
-          seed: "contract-video",
-          imageUrl: frameUrl,
-          durationS: 4,
-          label: { title: "Contract", subtitle: "Video" },
-        });
-
-        const status = await untilSettled(harness, requestId, harness.videoModel);
-        expect(status.state).toBe("completed");
-        if (status.state === "completed") expect(isUrl(status.outputUrl)).toBe(true);
-      },
-      harness.timeoutMs,
-    );
-
     it.skipIf(!harness.references)(
       "draws a frame from reference photos (ADR-024)",
       async () => {
@@ -106,6 +85,45 @@ export function describeMediaProviderContract(
         });
 
         const status = await untilSettled(harness, requestId, model);
+        expect(status.state).toBe("completed");
+        if (status.state === "completed") {
+          expect(isUrl(status.outputUrl)).toBe(true);
+          referenceFrameUrl = status.outputUrl;
+        }
+      },
+      harness.timeoutMs,
+    );
+
+    it(
+      "animates a frame into a video that starts from it (ADR-017), keeping its people and objects (ADR-026)",
+      async () => {
+        const start = referenceFrameUrl ?? frameUrl;
+        if (!start) throw new Error("A frame test must pass first: its frame is the input");
+        // With reference photos, the person and the product also travel as video elements.
+        const [person, product] = harness.references?.imageUrls ?? [];
+        const elements =
+          referenceFrameUrl && person && product
+            ? [
+                { role: "talent" as const, imageUrls: [person] },
+                { role: "product" as const, imageUrls: [product] },
+              ]
+            : undefined;
+        const { requestId } = await harness.provider.submit({
+          kind: "video",
+          model: harness.videoModel,
+          prompt: elements
+            ? "The talent slowly turns the product toward the camera and smiles. Camera: slow dolly in"
+            : "Slow dolly in toward the lighthouse as the beam sweeps across the sea",
+          negativePrompt: "CGI, plastic skin, morphing, garbled label text",
+          aspectRatio: elements ? "9:16" : "16:9",
+          seed: "contract-video",
+          imageUrl: start,
+          durationS: 4,
+          ...(elements ? { elements } : {}),
+          label: { title: "Contract", subtitle: "Video" },
+        });
+
+        const status = await untilSettled(harness, requestId, harness.videoModel);
         expect(status.state).toBe("completed");
         if (status.state === "completed") expect(isUrl(status.outputUrl)).toBe(true);
       },

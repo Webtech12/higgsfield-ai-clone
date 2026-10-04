@@ -19,6 +19,8 @@ export class SubmitGeneration {
       label: a.meta.label,
       ...(a.sourceUrl ? { imageUrl: a.sourceUrl } : {}),
       ...(a.meta.referenceUrls?.length ? { referenceImageUrls: a.meta.referenceUrls } : {}),
+      ...(a.meta.elements?.length ? { elements: a.meta.elements } : {}),
+      ...(a.meta.negativePrompt ? { negativePrompt: a.meta.negativePrompt } : {}),
       ...(a.meta.durationS === undefined ? {} : { durationS: a.meta.durationS }),
     });
     asset.markSubmitted(requestId);

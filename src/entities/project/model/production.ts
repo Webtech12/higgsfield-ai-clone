@@ -53,7 +53,9 @@ function productionMessage({
   if (total > 0 && ready === total) return "Your film is ready. Press play to watch it.";
   const tally = `${String(ready)} of ${String(total)} shots ready`;
   if (inFlight > 0) {
-    return `Rendering your film: ${tally}${failed > 0 ? `, ${String(failed)} failed` : ""}`;
+    // Kling v3 Pro renders the shots side by side in about 8 minutes (ADR-026): say so, so a long
+    // wait doesn't read as stuck.
+    return `Rendering your film (about 8 minutes): ${tally}${failed > 0 ? `, ${String(failed)} failed` : ""}`;
   }
   // Layout-neutral: the shot list sits beside the player on wide screens and below it on phones.
   const failures =

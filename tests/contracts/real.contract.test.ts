@@ -10,9 +10,10 @@ import { describeMediaProviderContract } from "./mediaProvider.suite";
 
 /**
  * The real providers on the same suites. Opt-in, because it spends money (one frame, one 4 s video,
- * one plan and one coaching call: about $0.20): RUN_REAL_CONTRACTS=1 npx vitest run tests/contracts/real
+ * one plan and one coaching call: about $0.75): RUN_REAL_CONTRACTS=1 npx vitest run tests/contracts/real
  * Set CONTRACT_REFERENCE_URLS to two comma-separated public photo URLs (a person, then a product) to
- * also draw a frame from references ($0.04). Keys come from .env.local; they are never printed.
+ * also draw a frame from references ($0.15) and animate it with them as elements. A Kling shot takes
+ * about 8 minutes, hence the long timeout. Keys come from .env.local; they are never printed.
  */
 const isEnabled = process.env.RUN_REAL_CONTRACTS === "1";
 if (isEnabled) {
@@ -51,9 +52,9 @@ describe.skipIf(!isEnabled)("real providers", () => {
         }
       : {}),
     wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
-    pollMs: 3_000,
-    maxPolls: 100,
-    timeoutMs: 330_000,
+    pollMs: 5_000,
+    maxPolls: 216,
+    timeoutMs: 1_100_000,
   }));
 
   describeLLMProviderContract(

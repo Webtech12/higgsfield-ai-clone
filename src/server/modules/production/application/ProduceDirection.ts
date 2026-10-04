@@ -7,9 +7,11 @@ import {
   type ShotContext,
 } from "@/server/modules/projects";
 import type { RoutingApi } from "@/server/modules/routing";
+import type { TalentApi } from "@/server/modules/talent";
 import type { Tx, UnitOfWork } from "@/server/platform/db";
 
 import { Asset } from "../domain/Asset";
+import { videoElements, type VideoElement } from "../domain/elements";
 import type { AssetRepository } from "../infrastructure/AssetRepository";
 
 /**
@@ -28,6 +30,7 @@ export class ProduceDirection {
       limits: LimitsApi;
       routing: RoutingApi;
       director: DirectorApi;
+      talent: TalentApi;
       newId: (prefix: string) => string;
     },
   ) {}
@@ -43,7 +46,8 @@ export class ProduceDirection {
 
     const videos = await this.d.uow.run(async (tx) => {
       const shots = await this.d.projects.startProduction(tx, command);
-      const created = await this.buildVideos(tx, shots, model.id, cost);
+      const elements = await this.elementsFor(shots);
+      const created = await this.buildVideos(tx, shots, { modelId: model.id, cost, elements });
       await this.d.limits.recordUsage(tx, {
         userId: command.userId,
         isGuest: command.isGuest,
@@ -60,7 +64,24 @@ export class ProduceDirection {
     return { assetIds: videos.map((video) => video.id) };
   }
 
-  private async buildVideos(tx: Tx, shots: ShotContext[], modelId: string, cost: number) {
+  /**
+   * The talent's current photos and the product's, kept consistent in motion (ADR-026). Casting is
+   * checked again here, so a talent whose consent has ended is never animated (ADR-024).
+   */
+  private async elementsFor(shots: ShotContext[]): Promise<VideoElement[]> {
+    const [first] = shots;
+    if (!first) return [];
+    const talent = first.talentId ? (await this.d.talent.getCasting(first.talentId)).photoUrls : [];
+    const product = first.references.filter((r) => r.role === "product").map((r) => r.url);
+    return videoElements({ talent, product });
+  }
+
+  private async buildVideos(
+    tx: Tx,
+    shots: ShotContext[],
+    video: { modelId: string; cost: number; elements: VideoElement[] },
+  ) {
+    const { modelId, cost, elements } = video;
     const frameIds = shots.flatMap((c) =>
       c.shot.currentFrameAssetId ? [c.shot.currentFrameAssetId] : [],
     );
@@ -97,6 +118,8 @@ export class ProduceDirection {
           meta: {
             aspectRatio: context.aspectRatio,
             durationS: context.shot.durationS,
+            ...(elements.length > 0 ? { elements } : {}),
+            negativePrompt: this.d.director.composeVideoNegativePrompt(),
             label: { title: context.shot.title, subtitle: context.direction.name },
           },
         }),

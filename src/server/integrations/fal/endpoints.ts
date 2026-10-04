@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { AspectRatio } from "@/contracts/brief";
-import type { GenerationRequest } from "@/server/modules/production";
+import type { GenerationRequest, VideoElement } from "@/server/modules/production";
 
 import { hashString } from "../hash";
 
@@ -51,7 +51,66 @@ const firstFrameOf = (request: GenerationRequest, model: string): string => {
   return request.imageUrl;
 };
 
+/** Nano Banana Pro at 2K (1536×2752 for 9:16): sharp enough to start a 1080p video from. */
+const nanoBananaPro = (request: GenerationRequest) => ({
+  prompt: request.prompt,
+  aspect_ratio: request.aspectRatio,
+  resolution: "2K",
+  // JPEG keeps a board of nine 2K frames light to load; PNGs were about 6 MB each.
+  output_format: "jpeg",
+  num_images: 1,
+  seed: seedOf(request),
+});
+
+/**
+ * Kling refers to elements in the prompt as @Element1, @Element2… in the order they are sent. The
+ * Director's prompts say "the talent" and "the product", so this binds those words to the elements.
+ */
+const bindElements = (elements: readonly VideoElement[]): string =>
+  elements.map((element, i) => `@Element${String(i + 1)} is the ${element.role}. `).join("");
+
+/** An element is a frontal photo plus 1–3 more angles; a single photo serves as both. */
+const toKlingElement = ({ role, imageUrls }: VideoElement) => {
+  const [frontal, ...angles] = imageUrls;
+  if (!frontal) throw new Error(`The ${role} element has no photo`);
+  return {
+    frontal_image_url: frontal,
+    reference_image_urls: (angles.length > 0 ? angles : [frontal]).slice(0, 3),
+  };
+};
+
 export const FAL_ENDPOINTS: Readonly<Record<string, FalEndpoint>> = {
+  "fal-ai/nano-banana-pro/edit": {
+    input: (request) => {
+      if (!request.referenceImageUrls?.length) {
+        throw new Error("Nano Banana Pro edit draws from reference photos: send at least one");
+      }
+      // In the order the prompt names them: talent, then product, then scene (ADR-024).
+      return { ...nanoBananaPro(request), image_urls: request.referenceImageUrls };
+    },
+    outputUrl: firstImage,
+  },
+  "fal-ai/nano-banana-pro": {
+    input: nanoBananaPro,
+    outputUrl: firstImage,
+  },
+  "fal-ai/kling-video/v3/pro/image-to-video": {
+    input: (request) => {
+      const elements = request.elements ?? [];
+      return {
+        prompt: `${bindElements(elements)}${request.prompt}`,
+        // The output canvas follows the first frame, so the frame's ratio is the video's.
+        start_image_url: firstFrameOf(request, "Kling v3 Pro"),
+        // Kling takes 3–15 s; the Director plans 4–6 s shots.
+        duration: String(request.durationS ?? 5),
+        // The finished ad gets its own music bed (ADR-024), and the talent never speaks.
+        generate_audio: false,
+        ...(request.negativePrompt ? { negative_prompt: request.negativePrompt } : {}),
+        ...(elements.length > 0 ? { elements: elements.map(toKlingElement) } : {}),
+      };
+    },
+    outputUrl: (data) => VideoOutput.parse(data).video.url,
+  },
   "fal-ai/bytedance/seedream/v4.5/edit": {
     input: (request) => {
       if (!request.referenceImageUrls?.length) {

@@ -24,15 +24,48 @@ export interface ModelEntry {
 const TEXT_ONLY = { min: 0, max: 0 } as const;
 
 /**
- * The one home for models, capabilities and prices (AGENTS.md §8). The fal entries were chosen by
- * the user in the model bake-off (ADR-025), with IDs and prices checked against fal's model and
- * pricing APIs. Provider costs are estimates for the kill-switch, rounded up so it errs high. Order
- * is the fallback order within a provider and kind.
+ * The one home for models, capabilities and prices (AGENTS.md §8). The fal entries were compared in
+ * the model bake-off (ADR-025) and chosen by the user for realism (ADR-026), with IDs and prices
+ * checked against fal's model and pricing APIs. Provider costs are estimates for the kill-switch,
+ * rounded up so it errs high. Order is the fallback order within a provider and kind.
  */
 export const MODEL_REGISTRY: readonly ModelEntry[] = [
   {
-    // $0.04 per image, at Seedream 4.5's smallest size (2560×1440 pixels): 2K frames that keep the
-    // talent's face and the product's label from their photos.
+    // $0.15 per image at 2K: the most natural skin, light and label text in the bake-off, drawn
+    // from the talent's, product's and scene's photos.
+    id: "fal-ai/nano-banana-pro/edit",
+    provider: "fal",
+    kind: "frame",
+    // fal documents no maximum; a brief sends at most 8 (3 talent, 3 product, 2 scene).
+    references: { min: 1, max: 8 },
+    creditCost: 0,
+    providerCostCents: 15,
+    reason: "Nano Banana Pro: true-to-life frames drawn from your talent's and product's photos",
+  },
+  {
+    // The same model without references, for a brief with no talent and no photos.
+    id: "fal-ai/nano-banana-pro",
+    provider: "fal",
+    kind: "frame",
+    references: TEXT_ONLY,
+    creditCost: 0,
+    providerCostCents: 15,
+    reason: "Nano Banana Pro: true-to-life frames from the brief alone",
+  },
+  {
+    // $0.14 per second: 56–84 cents for a 4–6 s shot, about 8 minutes to render. It starts from the
+    // storyboard frame, with the talent's and the product's photos as elements so faces and labels
+    // hold in motion.
+    id: "fal-ai/kling-video/v3/pro/image-to-video",
+    provider: "fal",
+    kind: "video",
+    // Elements: up to 4 photos each of the talent and the product, both optional.
+    references: { min: 0, max: 8 },
+    creditCost: 10,
+    providerCostCents: 84,
+    reason: "Kling v3 Pro: lifelike 1080p shots that keep your talent's face and product's label",
+  },
+  {
     id: "fal-ai/bytedance/seedream/v4.5/edit",
     provider: "fal",
     kind: "frame",
@@ -40,9 +73,9 @@ export const MODEL_REGISTRY: readonly ModelEntry[] = [
     creditCost: 0,
     providerCostCents: 4,
     reason: "Seedream 4.5: storyboard frames drawn from your talent's and product's photos",
+    isRetired: true,
   },
   {
-    // The same model without references, for a brief with no talent and no photos.
     id: "fal-ai/bytedance/seedream/v4.5/text-to-image",
     provider: "fal",
     kind: "frame",
@@ -50,9 +83,9 @@ export const MODEL_REGISTRY: readonly ModelEntry[] = [
     creditCost: 0,
     providerCostCents: 4,
     reason: "Seedream 4.5: storyboard frames from the brief alone",
+    isRetired: true,
   },
   {
-    // $0.03 per second at 1080p: 12–24 cents for a 4–8 s shot, about 30 s to render.
     id: "minimax/h3-max/image-to-video",
     provider: "fal",
     kind: "video",
@@ -60,6 +93,7 @@ export const MODEL_REGISTRY: readonly ModelEntry[] = [
     creditCost: 10,
     providerCostCents: 25,
     reason: "MiniMax H3 Max: 1080p shots that start from your storyboard frames",
+    isRetired: true,
   },
   {
     id: "fal-ai/bytedance/seedream/v4/text-to-image",

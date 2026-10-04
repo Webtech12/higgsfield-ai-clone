@@ -3,9 +3,12 @@
  * in the lean core (ADR-018), so these bound how long a job may run before it is failed.
  */
 export const GENERATION_POLICY = {
-  pollInterval: "3s",
-  /** 3 s × 120 polls = 6 minutes: comfortably above a slow image-to-video job. */
-  maxPolls: 120,
+  pollInterval: "5s",
+  /**
+   * 5 s × 240 polls = 20 minutes. Kling v3 Pro took about 7.5 minutes per shot in the bake-off, and
+   * a Nano Banana Pro frame once waited 18 minutes in fal's queue (ADR-026).
+   */
+  maxPolls: 240,
   workflowRetries: 3,
 } as const;
 

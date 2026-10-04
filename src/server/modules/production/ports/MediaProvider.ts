@@ -1,6 +1,8 @@
 import type { AspectRatio } from "@/contracts/brief";
 import type { AssetKind } from "@/contracts/project";
 
+import type { VideoElement } from "../domain/elements";
+
 export interface GenerationRequest {
   kind: AssetKind;
   model: string;
@@ -12,6 +14,10 @@ export interface GenerationRequest {
   imageUrl?: string;
   /** Frames: the talent's, product's and scene's photos, in the order the prompt names them. */
   referenceImageUrls?: string[];
+  /** Videos: the talent and the product, kept consistent in motion (ADR-026). */
+  elements?: VideoElement[];
+  /** What the model should avoid, for models that take a negative prompt. */
+  negativePrompt?: string;
   durationS?: number;
   /** Short human labels, used only by the fake provider to draw placeholder media. */
   label?: { title: string; subtitle: string };

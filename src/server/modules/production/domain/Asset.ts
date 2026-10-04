@@ -2,6 +2,8 @@ import type { AspectRatio } from "@/contracts/brief";
 import type { AssetKind, AssetStatus } from "@/contracts/project";
 import { DomainError } from "@/server/platform/errors";
 
+import type { VideoElement } from "./elements";
+
 /** Legal lifecycle moves. Data, not branching: a new state is a new entry (AGENTS.md §6). */
 const TRANSITIONS = {
   queued: ["submitted", "failed"],
@@ -28,6 +30,10 @@ export interface AssetMeta {
   durationS?: number;
   /** Frames: the reference photos the prompt names, in order (ADR-024). */
   referenceUrls?: string[];
+  /** Videos: the talent and the product, kept consistent in motion (ADR-026). */
+  elements?: VideoElement[];
+  /** Videos: what the model should avoid (ADR-026). */
+  negativePrompt?: string;
   label: { title: string; subtitle: string };
 }
 

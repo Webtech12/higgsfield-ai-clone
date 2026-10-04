@@ -5,6 +5,7 @@ import type { LimitsApi } from "@/server/modules/limits";
 import type { MediaApi } from "@/server/modules/media";
 import type { ProjectsApi } from "@/server/modules/projects";
 import type { RoutingApi } from "@/server/modules/routing";
+import type { TalentApi } from "@/server/modules/talent";
 import type { Database, UnitOfWork } from "@/server/platform/db";
 
 import { CheckGeneration, FailGeneration } from "./application/CheckGeneration";
@@ -18,6 +19,7 @@ import { createAssetGenerateWorkflow } from "./workflows/assetGenerate";
 import { createSweepWorkflow } from "./workflows/sweep";
 
 export type { GenerationOrder } from "./application/RequestGeneration";
+export type { VideoElement } from "./domain/elements";
 export type { GenerationRequest, MediaProvider, ProviderStatus } from "./ports/MediaProvider";
 
 export function createProductionModule(deps: {
@@ -30,6 +32,8 @@ export function createProductionModule(deps: {
   credits: CreditsApi;
   limits: LimitsApi;
   director: DirectorApi;
+  /** Producing checks casting again and animates with the talent's photos (ADR-026). */
+  talent: TalentApi;
   newId: (prefix: string) => string;
 }) {
   const assets = new AssetRepository(deps.db);

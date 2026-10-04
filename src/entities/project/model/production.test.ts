@@ -41,7 +41,7 @@ describe("productionProgress", () => {
       failed: 0,
       inFlight: 2,
       total: 3,
-      message: "Rendering your film: 1 of 3 shots ready",
+      message: "Rendering your film (about 8 minutes): 1 of 3 shots ready",
     });
   });
 

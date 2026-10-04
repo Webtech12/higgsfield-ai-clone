@@ -56,6 +56,6 @@ describe("progressMessage", () => {
 
     expect(
       progressMessage(view("producing", [rendering, rendering], { selectedDirectionId: "dir_1" })),
-    ).toBe("Rendering your film: 0 of 2 shots ready");
+    ).toBe("Rendering your film (about 8 minutes): 0 of 2 shots ready");
   });
 });
