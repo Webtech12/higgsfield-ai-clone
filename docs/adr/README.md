@@ -27,5 +27,6 @@ Each ADR records one significant decision: its context, the decision, the altern
 | [021](./021-toolchain-npm-and-node-versions.md) | Toolchain: npm, Node 24 deployed, Node 26 locally | Accepted |
 | [022](./022-no-custom-domain-yet.md) | No custom domain yet: r2.dev media and Google-only sign-in live | Accepted; media half superseded by 023 |
 | [023](./023-vercel-blob-media-storage.md) | Store generated media in Vercel Blob instead of Cloudflare R2 | Accepted |
+| [024](./024-ad-studio-with-consenting-talent.md) | An ad studio with seeded, consenting talent | Accepted |
 
 To add a decision, copy [`000-template.md`](./000-template.md) to the next number.

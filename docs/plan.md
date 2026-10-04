@@ -1,8 +1,24 @@
 # Build plan
 
-Deadline: **2026-09-24 11:17 UTC**. The brief ([`assignment.md`](./assignment.md)) judges speed, product judgement and UX/UI. The build therefore goes in vertical slices, each ending deployed, so there is always a working live link. Fakes come first (`PROVIDERS=fake`), and real providers arrive in one integration slice.
-
 Each slice's plan is posted in chat and approved by the user before it starts ([`AGENTS.md` §12](../AGENTS.md)).
+
+## Now: the ad studio proof of concept
+
+From 2026-10-04 Director is an ad studio with seeded, consenting talent
+([ADR-024](./adr/024-ad-studio-with-consenting-talent.md)). S0–S4 below shipped the film version;
+remix (S5) becomes A3's refinements, and accounts (S6) wait until talent or payments need them.
+
+| # | Slice | Done when | Needs from the user |
+|---|---|---|---|
+| A0 | **Decide**: ADR-024, `AGENTS.md` §1 rewritten for ads, then a model bake-off (`npm run bakeoff`): the same fictional talent and product through 5 frame models, 6 video models and 4 music models, plus a test assembly in fal's cloud ffmpeg, compared side by side | The user has picked the frame, video and music models; ADR-025 records them | Approve about $4.50 of fal spend; pick the models |
+| A1 | **Talent, ad brief, 3 concepts**: the `talent` module and seed script, brand photo uploads, the structured brief with templates and **Polish with AI**, ad plans with hooks, headlines and calls to action, storyboard frames drawn from the talent's and product's photos | On the live link a brief with photos and a cast becomes 3 concepts × 3 frames showing the talent and the product | The talent pack: photos, profile text and a signed release per person, in a local `talent/` folder |
+| A2 | **Finish the ad**: music and finished-ad asset kinds, assets that wait for their inputs, premium image-to-video, the music bed, text overlays and assembly by fal's cloud ffmpeg, 30 credits on the finished ad | A finished ad plays and downloads from the live link; the money path is tested | — |
+| A3 | **Refine and versions**: re-direct a shot, swap the talent, change the music, edit the text; versions kept and playable; the free cap | Each refinement works on the live link; the Playwright journey covers brief → finish → refine → download | — |
+| A4 | **Examples and polish**: a gallery of finished ads with their briefs, a UX pass (loading, empty and error states, mobile, keyboard, screen reader), prompts tuned on real outputs | The gallery shows 2–3 real ads; the checklist in `AGENTS.md` §13 holds | Approve the example ads |
+
+## Before: the film build (2026-09-23 to 2026-10-04)
+
+Deadline: **2026-09-24 11:17 UTC**. The brief ([`assignment.md`](./assignment.md)) judges speed, product judgement and UX/UI. The build therefore goes in vertical slices, each ending deployed, so there is always a working live link. Fakes come first (`PROVIDERS=fake`), and real providers arrive in one integration slice.
 
 ## Slices
 
@@ -19,7 +35,11 @@ Each slice's plan is posted in chat and approved by the user before it starts ([
 
 S1–S7 total about 15.5 hours, leaving about 4 hours of buffer before the deadline.
 
-## After S4: talent in ads
+## After S4: talent in ads (superseded)
+
+Superseded on 2026-10-04 by the ad studio above: talent is seeded instead of self-serve, and
+there is no sign-in or per-ad approval in the proof of concept
+([ADR-024](./adr/024-ad-studio-with-consenting-talent.md)).
 
 Requested after S3: brands cast real talent (actors, influencers, models) from a pool, and the ad is
 generated with their likeness and persona. AGENTS.md §1 lists "marketing studio" as out of scope, so

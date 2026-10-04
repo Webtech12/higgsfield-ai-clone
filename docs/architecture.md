@@ -5,6 +5,8 @@
 > `AGENTS.md` is the operational source of truth for agents. This document explains the *why* behind it.
 >
 > **Amended 2026-09-23** by [ADR-018](./adr/018-lean-core-for-the-24-hour-build.md) to [ADR-022](./adr/022-no-custom-domain-yet.md): lean core (no outbox, no webhooks), module boundary corrections, OpenAI as the LLM, npm, and no custom domain yet.
+>
+> **Amended 2026-10-04** by [ADR-024](./adr/024-ad-studio-with-consenting-talent.md): Director makes ads. A `talent` module holds seeded, consenting talent; `media` stores brand photo uploads; storyboard frames use the talent's and product's photos as references; finished ads are assembled by fal's cloud ffmpeg.
 
 ---
 
@@ -66,25 +68,26 @@ flowchart LR
 
 ## 3. Architecture style: a modular monolith with hexagonal modules
 
-**One deployable**, split into **ten domain modules** (bounded contexts). Each module is internally hexagonal: domain, application, ports and infrastructure ([ADR-001](./adr/001-modular-monolith.md)).
+**One deployable**, split into **eleven domain modules** (bounded contexts). Each module is internally hexagonal: domain, application, ports and infrastructure ([ADR-001](./adr/001-modular-monolith.md)).
 
 ### 3.1 Modules
 
 | Module | Owns | Public API (examples) | Depends on |
 |---|---|---|---|
 | **identity** (Auth & Accounts) | Better Auth tables, `guest_merges` | `getCurrentUser`, `requireUser`, `markGuestMerged` | — |
-| **director** (AI Director) | Director prompts, plan generation/validation, `PromptComposer`, remix rewrites | `planProject`, `composeFramePrompt`, `composeVideoPrompt`, `rewriteShot` | projects |
-| **projects** (Project & Continuity) | projects, directions, shots, elements | `createProject`, `applyPlan`, `selectDirection`, `updateShot`, `updateElements`, `reassignOwner` | identity |
-| **storyboard** | Frame generation and redraws | `generateFrames`, `redrawFrame` | projects, production, routing, director |
-| **production** (Generation Engine) | assets, generation_jobs; generation workflows; stuck-job sweep | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director |
-| **remix** (Remix & Versioning) | Single-shot remix → new asset version | `remixShot` | projects, production, routing, credits, limits, director |
+| **director** (AI Director) | Director prompts, ad plans and their validation, the brief coach, `PromptComposer`, refinement rewrites | `planProject`, `coachBrief`, `composeFramePrompt`, `composeVideoPrompt`, `rewriteShot` | projects, talent |
+| **projects** (Project & Continuity) | projects (ad brief, cast, photo references), directions (concepts), shots, elements | `createProject`, `applyPlan`, `selectDirection`, `updateShot`, `updateElements`, `reassignOwner` | identity |
+| **talent** (Talent roster) | `talents`: profiles, photos, consent record, active flag | `getCasting` | — |
+| **storyboard** | Frame generation and redraws, with talent and product photos as references | `generateFrames`, `redrawFrame` | projects, production, routing, director, talent |
+| **production** (Generation Engine) | assets, generation_jobs; generation workflows; stuck-job sweep; finishing an ad | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director |
+| **remix** (Refine & Versioning) | Refinements of a finished ad → a new version | `refineAd` | projects, production, routing, credits, limits, director, talent |
 | **routing** (Smart Select) | Model registry, routing policy, pricing | `selectModel`, `priceOf` | — |
 | **credits** (Credits & Billing) | Append-only ledger | `grant`, `reserve`, `capture`, `release`, `transfer`, `balanceOf` | identity |
 | **limits** (Usage Limits & Abuse) | Rate limits, caps, kill-switch | `assertCanGenerate`, `assertWithinRate`, `recordUsage` | identity |
-| **media** (Storage & Delivery) | Object keys, persistence, delivery URLs | `persistFromUrl`, `urlFor` | — |
+| **media** (Storage & Delivery) | Object keys, brand photo uploads, persistence, delivery URLs | `persistFromUrl`, `saveUpload`, `getOwnedUploads` | — |
 
 Cross-cutting code that is **not** a domain module ([ADR-019](./adr/019-module-boundary-corrections.md)):
-- **Processes** live in `server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`). No module depends on a process.
+- **Processes** live in `server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`, `createAd`). No module depends on a process.
 - **Read queries** live in `server/queries/*`: read-only SQL for the workspace view and the gallery, the only code that reads across module tables.
 - **Provider Integration** lives in `server/integrations/*`: adapters implementing module ports.
 - **Live Status** comes from the workspace read query plus frontend polling.
@@ -112,6 +115,9 @@ flowchart TD
   remix --> credits
   remix --> limits
   storyboard --> routing
+  storyboard --> talent
+  director --> talent
+  remix --> talent
   projects --> identity
   credits --> identity
   limits --> identity
@@ -204,6 +210,8 @@ sequenceDiagram
 |---|---|
 | identity | `user` (incl. `is_anonymous`), `session`, `account`, `verification` (Better Auth-generated), `guest_merges` |
 | projects | `projects`, `directions`, `shots` |
+| talent | `talents` |
+| media | `uploads` |
 | production | `assets`, `generation_jobs` |
 | credits | `credit_ledger` |
 | limits | `usage_daily` |

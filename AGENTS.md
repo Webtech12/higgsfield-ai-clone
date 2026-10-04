@@ -10,34 +10,50 @@ build order and cut list in `docs/plan.md`.
 
 ## 1. Product
 
-An AI creative director for video. The user writes a rough idea (a brief). The app returns 3 creative
-directions, each with 3 shots and a storyboard frame per shot. The user picks a direction, each shot
-becomes a video (image-to-video, with the storyboard frame as the first frame), and the user can remix
-ONE shot without regenerating the others. Every version is kept.
+An AI creative director for **ads** ([ADR-024](docs/adr/024-ad-studio-with-consenting-talent.md)).
+A brand describes its product and the ad it wants in a structured brief with product photos, and casts
+one talent from a roster of real people who have consented. The app returns 3 ad concepts, each with
+3 shots and a storyboard frame per shot showing the talent and the product. The brand picks a concept,
+Director finishes it as one ad (a premium video per shot, a music bed and on-screen text, joined into
+one MP4), and the brand refines it and downloads it. Every version is kept.
 
 It uses Higgsfield's cinematic language (camera-motion presets such as dolly in, crane up, crash zoom,
-FPV) but reorganises the experience around the creator's intent instead of model selection.
+FPV) but organises the experience around the brand's intent instead of model selection.
 
-**Core loop:** Brief → Directions/Storyboard → Produce → Review → Remix one shot → Playback.
+**Core loop:** Brief → 3 concepts (storyboards) → Finish → Review → Refine → Download.
 
-**v1 product decisions**
-- **Brief:** one "What's your film about?" field, an aspect ratio (16:9, 9:16 or 1:1) and optional style
-  chips. There is no model or intent picker; Smart Select chooses models.
-- **Board:** each of the 3 directions shows its 3 shots with storyboard frames. After picking a direction,
-  the user can edit a shot's description, camera move and duration. An edited shot shows "Frame out of
-  date" with a free, rate-limited **Redraw frame** action. Producing uses each shot's current frame.
-- **Remix:** a "What should change?" note, camera-move chips, and an **Also redraw the frame** toggle
-  (off: a new video from the same frame; on: a new frame, then a new video). Every version is kept with
-  `parent_asset_id`. The latest successful version becomes current; older versions stay playable.
-- **Credits:** a video shot costs 10 credits and a remix 10. Planning and storyboard frames are free but
-  rate-limited and count toward the daily spend cap. Guests start with 40 credits (one full loop: 3 shots
-  and 1 remix); signing in adds 60. The balance sits in the header, and every button that spends credits
+**Product decisions**
+- **Brief:** a template (UGC testimonial, product hero, lifestyle, unboxing, before/after), product name
+  and key benefit, audience, key message, call to action, mood chips, scene direction, up to 3 product
+  photos and 2 scene photos, one talent (optional only for product hero), and an aspect ratio (9:16, 16:9
+  or 1:1). **Polish with AI** rewrites the fields, flags what's missing and gives tips. There is no model
+  picker; Smart Select chooses models.
+- **Talent:** 5 seeded profiles of real people with a signed release. We store its date, scope and a
+  reference; the document stays offline. No talent sign-up or login yet. Talent photos and the manifest
+  never enter git: a seed script uploads them from a local, gitignored `talent/` folder. A deactivated
+  talent can't be cast, and no new generation uses their photos.
+- **Board:** each concept shows its hook, headline, call to action, music mood and 3 shots with
+  storyboard frames drawn from the talent's and product's photos. After picking a concept, the brand can
+  edit a shot's description, camera move and duration; an edited shot shows "Frame out of date" with a
+  free, rate-limited **Redraw frame** action.
+- **Finish:** each shot becomes a premium video from its current frame (the frame is the first frame),
+  plus a music bed and the headline and call to action as text, assembled into one MP4 by fal's cloud
+  ffmpeg. Each shot is also downloadable.
+- **Refine:** re-direct one shot, swap the talent, change the music or edit the text. Each refinement
+  makes a new version of the finished ad (`parent_asset_id`); the latest success is current and older
+  versions stay playable.
+- **Credits:** finishing an ad costs 30 credits and a refinement 10, charged on the finished ad and
+  refunded if it fails. Briefs, Polish with AI, planning and storyboard frames are free but rate-limited,
+  and frames count toward the daily spend cap. Guests start with 40 credits (exactly 1 ad + 1
+  refinement); signing in adds 60. The balance sits in the header, and every button that spends credits
   shows its cost.
 - **Caps:** 6 videos per guest, 18 per user, and a $10/day global spend kill-switch.
-- **Demo project:** seeded, public and read-only. A signed-out visitor can open it straight away.
+- **Examples:** finished ads are shown with the briefs that made them, public and read-only. A
+  signed-out visitor can watch them straight away.
 
 **Out of scope (do NOT build):** model marketplace, Cinema Studio clone, node/canvas workflows,
-Soul ID training, marketing studio, a chat agent, real payments, collaboration, a video editor, stitched MP4 export.
+per-talent model training (Soul ID), talent sign-up or logins, brand video uploads,
+voiceover/dialogue/lip-sync, a chat agent, real payments, collaboration, a timeline video editor.
 
 ---
 
@@ -54,7 +70,7 @@ Soul ID training, marketing studio, a chat agent, real payments, collaboration, 
 | Transactional email | Resend for magic links once a domain exists; a fake sender that logs the link in dev, CI and E2E |
 | Durable workflows | Inngest. Generation workflows poll the provider's status; there are no webhooks in v1 ([ADR-018](docs/adr/018-lean-core-for-the-24-hour-build.md)) |
 | LLM | OpenAI Responses API (`openai`), structured outputs validated with zod, `DIRECTOR_MODEL=gpt-6-sol` ([ADR-020](docs/adr/020-openai-llm-provider.md)) |
-| Image / video models | fal.ai (`@fal-ai/client`) queue API, polled from the workflow. Model IDs are chosen at the first real-provider run; the fake provider is used until then |
+| Image / video / music models | fal.ai (`@fal-ai/client`) queue API, polled from the workflow. Model IDs come from the bake-off and live in the routing registry. fal's cloud ffmpeg assembles finished ads ([ADR-024](docs/adr/024-ad-studio-with-consenting-talent.md)) |
 | Object storage | Vercel Blob (`@vercel/blob`), public, served from Vercel's CDN ([ADR-023](docs/adr/023-vercel-blob-media-storage.md)) |
 | Rate limits / idempotency store | Upstash Redis (`@upstash/ratelimit`, `@upstash/redis`) |
 | Validation | zod (shared client/server via `src/contracts`) |
@@ -66,7 +82,7 @@ Soul ID training, marketing studio, a chat agent, real payments, collaboration, 
 | Hosting | Vercel (app and Blob), Neon (DB), Inngest Cloud, Upstash |
 
 Rejected on purpose: a separate Express/Nest API service, Prisma, tRPC/GraphQL, Redux/Zustand,
-hosted auth (Clerk), Edge runtime, ffmpeg. The reasons are in `docs/adr/`.
+hosted auth (Clerk), Edge runtime, ffmpeg inside our own functions. The reasons are in `docs/adr/`.
 
 ---
 
@@ -78,18 +94,19 @@ The backend is a **modular monolith**. Each module owns its tables and exposes a
 | Module | Owns | Public API (examples) | May depend on |
 |---|---|---|---|
 | **identity** (Auth & Accounts) | Better Auth tables (user, session, account, verification) and `guest_merges` | `getCurrentUser`, `requireUser`, `markGuestMerged` | — |
-| **director** (AI Director) | Director prompts and the `PromptComposer`, plan generation and validation, remix rewrites | `planProject`, `composeFramePrompt`, `composeVideoPrompt`, `rewriteShot` | projects |
-| **projects** (Project & Continuity) | projects, directions, shots, elements | `createProject`, `applyPlan`, `selectDirection`, `updateShot`, `updateElements`, `reassignOwner` | identity |
-| **storyboard** | Frame generation and redraws | `generateFrames`, `redrawFrame` | projects, production, routing, director |
-| **production** (Generation Engine) | assets, generation_jobs; generation workflows + stuck-job sweep | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director |
-| **remix** (Remix & Versioning) | Shot remix (director rewrite → new asset version with `parent_asset_id`) | `remixShot` | projects, production, routing, credits, limits, director |
+| **director** (AI Director) | Director prompts and the `PromptComposer`, ad plans and their validation, the brief coach, refinement rewrites | `planProject`, `coachBrief`, `composeFramePrompt`, `composeVideoPrompt`, `rewriteShot` | projects, talent |
+| **projects** (Project & Continuity) | projects (with the ad brief, cast and photo references), directions (concepts), shots, elements | `createProject`, `applyPlan`, `selectDirection`, `updateShot`, `updateElements`, `reassignOwner` | identity |
+| **talent** (Talent roster) | `talents`: profiles, photos, consent record, active flag | `getCasting` | — |
+| **storyboard** | Frame generation and redraws, with talent and product photos as references | `generateFrames`, `redrawFrame` | projects, production, routing, director, talent |
+| **production** (Generation Engine) | assets, generation_jobs; generation workflows + stuck-job sweep; finishing an ad | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director |
+| **remix** (Refine & Versioning) | Refinements of a finished ad (re-direct a shot, swap the talent, change the music, edit the text) → a new version with `parent_asset_id` | `refineAd` | projects, production, routing, credits, limits, director, talent |
 | **routing** (Model Routing / Smart Select) | Model registry, routing policy, pricing | `selectModel`, `priceOf` | — |
 | **credits** (Credits & Billing) | Append-only credit ledger | `grant`, `reserve`, `capture`, `release`, `transfer`, `balanceOf` | identity |
 | **limits** (Usage Limits & Abuse Protection) | Rate limits, guest/user caps, global spend kill-switch | `assertCanGenerate`, `assertWithinRate`, `recordUsage` | identity |
-| **media** (Media Storage & Delivery) | Object keys, persistence from provider URLs, delivery URLs | `persistFromUrl`, `urlFor` | — |
+| **media** (Media Storage & Delivery) | Object keys, brand photo `uploads`, persistence from provider URLs, delivery URLs | `persistFromUrl`, `saveUpload`, `getOwnedUploads` | — |
 
 Cross-cutting code that is not a domain module ([ADR-019](docs/adr/019-module-boundary-corrections.md)):
-- **Processes** → `src/server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`). A process may depend on any module; no module depends on a process.
+- **Processes** → `src/server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`, `createAd`). A process may depend on any module; no module depends on a process.
 - **Read queries** → `src/server/queries/*`: read-only SQL for the workspace view (`getWorkspaceView`) and the gallery (`listProjects`). The only code that may read across module tables. It never writes.
 - **Provider Integration** → `src/server/integrations/*` (fal, openai, blob, upstash, resend, and a fake for each port). These are adapters implementing module ports.
 - **Live Status & Updates** → the workspace read query + the frontend `useProject` polling hook.
@@ -119,7 +136,8 @@ src/
 │     ├─ v1/…                            # REST API
 │     └─ inngest/route.ts                # workflow endpoint
 ├─ features/                             # frontend slices: auth, brief, board, studio, projects, credits
-├─ entities/project/                     # shared frontend slice: queries, useProject, view models, status meta
+├─ entities/                             # shared frontend slices: project (queries, useProject, view
+│                                        # models, status meta), talent (view models, talent card)
 ├─ shared/                               # ui (design system), lib (apiClient, apiErrors, idempotency), config
 ├─ contracts/                            # zod schemas + enums shared by client and server
 └─ server/
@@ -140,10 +158,14 @@ tests/
 ├─ contracts/                            # shared suites for MediaProvider and LLMProvider implementations
 ├─ integration/                          # real Postgres (Neon test branch)
 └─ e2e/                                  # Playwright, PROVIDERS=fake
+scripts/                                 # ops tooling: migrations preflight, demo, talent seed, bake-off
+fixtures/talent/                         # fictional placeholder talent for development and E2E
+talent/                                  # the real talent pack (manifest + photos): gitignored, never committed
 docs/  assignment.md  plan.md  architecture.md  frontend.md  standards.md  adr/  research/
 ```
 
 The Better Auth instance and its generated schema live in `server/modules/identity/infrastructure/`.
+Scripts are tooling outside the app, so they may call `pg`, `@vercel/blob` or `@fal-ai/client` directly.
 
 ---
 
@@ -151,7 +173,7 @@ The Better Auth instance and its generated schema live in `server/modules/identi
 
 - **No login wall.** The app, the demo project and the gallery open without signing in.
 - A guest identity is created with Better Auth's `anonymous` plugin **on the first meaningful action**
-  (submitting a brief), not on page load. This avoids bot-created rows.
+  (uploading a photo, polishing a brief or submitting one), not on page load. This avoids bot-created rows.
 - **All data is owned by `user_id`.** Guests are users with `isAnonymous = true`. There are no separate "session-owned" tables.
 - Sign-in methods: Google OAuth and magic link. The live app shows only Google until a domain is verified
   ([ADR-022](docs/adr/022-no-custom-domain-yet.md)); magic link with the fake email sender is what the E2E tests use.
@@ -221,7 +243,7 @@ The Better Auth instance and its generated schema live in `server/modules/identi
 - TypeScript `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`. No `any`, no floating promises, no swallowed errors, no unexplained `!`.
 - Parse with zod at every trust boundary: HTTP bodies, provider responses, LLM output, env, API responses on the client.
 - **DRY = one home per piece of knowledge:**
-  - Shapes and enums live in `contracts/`.
+  - Shapes and enums live in `contracts/`, including the ad templates and their beats (`contracts/ad.ts`).
   - Models, capabilities and costs live in the routing module's registry.
   - Prompts are built only by `director`'s `PromptComposer`; other modules call it through `director`'s `index.ts`.
   - Error code → HTTP status lives in `platform/http/errorMap.ts`; error code → user copy lives in `shared/lib/apiErrors.ts`.
@@ -239,11 +261,11 @@ The Better Auth instance and its generated schema live in `server/modules/identi
 ## 9. Testing
 
 - Domain: unit tests for `CreditAccount`, the `Asset` state machine, `Project` selection, and the pricing and routing policies.
-- Use cases: in-memory repositories + fake providers + a fake clock, for the money path (reserve → fail → release) and remix lineage.
+- Use cases: in-memory repositories + fake providers + a fake clock, for the money path (reserve → fail → release) and refinement lineage.
 - Contracts: the fake and real `MediaProvider` and `LLMProvider` implementations run the shared suite.
 - Integration (Neon test branch): two parallel reserves must not overdraw.
 - Frontend: view models, `useProject` polling stop, error-state mapping (RTL + MSW).
-- E2E (Playwright, `PROVIDERS=fake`): brief → board → produce → remix one shot → playback. If time allows: guest work preserved after a magic-link sign-in.
+- E2E (Playwright, `PROVIDERS=fake`): brief → 3 concepts → finish → refine → download. If time allows: guest work preserved after a magic-link sign-in.
 - Deferred ([ADR-018](docs/adr/018-lean-core-for-the-24-hour-build.md)): the ~90% domain coverage gate, repository contract suites, and merge integration tests.
 
 ## 10. Commands
@@ -259,6 +281,9 @@ npm run test:e2e           # playwright, PROVIDERS=fake
 npm run db:generate        # drizzle-kit generate (new migration from schema changes)
 npm run db:migrate         # apply migrations
 npm run demo:prod -- <id>  # make a finished production film the public demo (reads .env.prod)
+npm run talent:seed -- --fake      # seed the fictional placeholder talent (local database)
+npm run talent:prod -- talent      # seed the real talent pack from ./talent (reads .env.prod)
+npm run bakeoff -- <stage>         # model bake-off: inputs | frames | videos | music | cut | page
 npm run auth:generate      # regenerate the Better Auth schema into identity/infrastructure
 ```
 
