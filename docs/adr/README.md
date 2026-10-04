@@ -28,5 +28,6 @@ Each ADR records one significant decision: its context, the decision, the altern
 | [022](./022-no-custom-domain-yet.md) | No custom domain yet: r2.dev media and Google-only sign-in live | Accepted; media half superseded by 023 |
 | [023](./023-vercel-blob-media-storage.md) | Store generated media in Vercel Blob instead of Cloudflare R2 | Accepted |
 | [024](./024-ad-studio-with-consenting-talent.md) | An ad studio with seeded, consenting talent | Accepted |
+| [025](./025-models-chosen-by-bake-off.md) | Models chosen by a bake-off | Accepted |
 
 To add a decision, copy [`000-template.md`](./000-template.md) to the next number.

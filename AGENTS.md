@@ -70,7 +70,7 @@ voiceover/dialogue/lip-sync, a chat agent, real payments, collaboration, a timel
 | Transactional email | Resend for magic links once a domain exists; a fake sender that logs the link in dev, CI and E2E |
 | Durable workflows | Inngest. Generation workflows poll the provider's status; there are no webhooks in v1 ([ADR-018](docs/adr/018-lean-core-for-the-24-hour-build.md)) |
 | LLM | OpenAI Responses API (`openai`), structured outputs validated with zod, `DIRECTOR_MODEL=gpt-6-sol` ([ADR-020](docs/adr/020-openai-llm-provider.md)) |
-| Image / video / music models | fal.ai (`@fal-ai/client`) queue API, polled from the workflow. Model IDs come from the bake-off and live in the routing registry. fal's cloud ffmpeg assembles finished ads ([ADR-024](docs/adr/024-ad-studio-with-consenting-talent.md)) |
+| Image / video / music models | fal.ai (`@fal-ai/client`) queue API, polled from the workflow. Models come from the bake-off ([ADR-025](docs/adr/025-models-chosen-by-bake-off.md)): Seedream 4.5 frames, MiniMax H3 Max video, ElevenLabs Music v2.5; their IDs live only in the routing registry. fal's cloud ffmpeg assembles finished ads ([ADR-024](docs/adr/024-ad-studio-with-consenting-talent.md)) |
 | Object storage | Vercel Blob (`@vercel/blob`), public, served from Vercel's CDN ([ADR-023](docs/adr/023-vercel-blob-media-storage.md)) |
 | Rate limits / idempotency store | Upstash Redis (`@upstash/ratelimit`, `@upstash/redis`) |
 | Validation | zod (shared client/server via `src/contracts`) |
