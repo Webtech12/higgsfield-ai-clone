@@ -12,12 +12,35 @@ Each slice's plan is posted in chat and approved by the user before it starts ([
 | S1 | **Scaffold and deploy**: Next.js 16, TypeScript strict, Tailwind + shadcn with the dark theme tokens, ESLint (boundaries) + Prettier + husky, `env.ts` with fake mode, Drizzle + `pg` client, Vitest + Playwright smoke tests, GitHub Actions CI on Node 24, an app shell on Vercel | 1.5h | The live URL shows the shell; CI is green | Public GitHub repo, Vercel project, Neon project with a `test` branch |
 | S2 | **Brief → Board (fakes)**: guest on first submit; projects, director (`PromptComposer`, fake LLM), storyboard frames through production with the fake media provider; the workspace read query + `useProject` polling; Brief page and Board (3 directions × 3 shots), selecting a direction, shot edits with **Redraw frame** | 3h | A brief shows 3 directions with 9 frames on the live link | — |
 | S3 | **Produce → Studio (fakes)**: credits ledger and onboarding grants, caps and the kill-switch, `ProduceDirection`, the `asset.generate` polling workflow and the sweep, Studio with shot statuses, the sequential player and downloads; the concurrent-reserve integration test | 3h | Produce → 3 videos → playback on the live link | — |
-| S4 | **Real providers**: OpenAI adapter (`gpt-6-sol`) and fal adapter with contract tests, model registry entries (IDs and prices approved by the user), R2 persistence, Inngest Cloud, Upstash, the seeded demo project with real media | 2h | A real brief yields real frames and videos on the live link, within the caps | OpenAI key with a usage limit, fal key with a spend limit, R2 bucket (r2.dev) + token, Inngest app, Upstash database |
+| S4 | **Real providers**: OpenAI adapter (`gpt-6-sol`) and fal adapter with contract tests, model registry entries (IDs and prices approved by the user: Seedream 4.0 frames, Seedance 1.0 Lite video), Vercel Blob persistence ([ADR-023](./adr/023-vercel-blob-media-storage.md)) with a same-origin download route, frame spend counted by the kill-switch, Inngest Cloud, Upstash, the seeded demo project with real media | 2h | A real brief yields real frames and videos on the live link, within the caps | OpenAI key with a usage limit, fal key with a spend limit and balance, a Vercel Blob store, Inngest app, Upstash database |
 | S5 | **Remix and versions**: `remixShot` via `director.rewriteShot`, the redraw-frame toggle, version strip, latest success becomes current, optimistic pending version with rollback | 2h | One shot remixed on the live link; older versions still playable | — |
 | S6 | **Accounts**: Google sign-in, the `mergeGuest` process with the "Moving your guest work…" state, cap and out-of-credits states that offer sign-in, magic link built and hidden live | 2h | Guest work survives a Google sign-in on the live link | Google OAuth client with the live redirect URI |
 | S7 | **Polish and submit**: a UX pass over every loading, empty and error state, mobile width, keyboard and screen reader; the Playwright journey; README; walkthrough script; submission checklist | 2h | Every item in the checklist below is ticked | Record the walkthrough |
 
 S1–S7 total about 15.5 hours, leaving about 4 hours of buffer before the deadline.
+
+## After S4: talent in ads
+
+Requested after S3: brands cast real talent (actors, influencers, models) from a pool, and the ad is
+generated with their likeness and persona. AGENTS.md §1 lists "marketing studio" as out of scope, so
+§1 is updated, with an ADR on likeness and consent, before T1 starts.
+
+Order: S4 → S6 (talent need real sign-in) → T1 → T2 → S5 → S7.
+
+| # | Slice | Done when |
+|---|---|---|
+| T1 | **Talent profiles**: a `talent` module; sign-in required; a profile with persona, photos (Blob), categories accepted or refused and recorded consent; goes live self-serve into a public pool | A signed-in user publishes a profile that appears in the pool |
+| T2 | **Casting and approval**: a commercial brief (product or brand, message, audience, call to action, optional product photo) with a cast picker; the Director writes the persona into the shots; frames from Seedream 4.0 edit with the talent's (and product's) photos as references; the ad waits for the talent's approval before the brand can download it | A brand casts a talent, the talent approves, and the brand downloads the ad |
+
+Decisions (2026-10-04):
+- **Consent:** the talent approves each ad before the brand can download it.
+- **Verification:** profiles go live self-serve, with no review queue. Per-ad approval can't stop an
+  impersonator approving their own fakes, so T1 proposes a "these photos are of me" attestation and a
+  report-and-takedown path.
+- **Voice:** visual only; no dialogue, voice cloning or lip-sync.
+- **Likeness:** reference photos (Seedream 4.0 edit takes up to 10); per-talent training only if
+  consistency falls short. The edit endpoint's price is checked and approved before use.
+- **Payouts:** real payments stay out of scope; v1 records which talent appeared in which ad.
 
 ## Cut list
 
@@ -41,7 +64,7 @@ Never cut:
 Keys go in `.env.local` and the Vercel dashboard, **never in chat**.
 
 1. **S1:** GitHub (an empty public repo), Vercel (import the repo), Neon (a project plus a `test` branch).
-2. **S4:** OpenAI (a key with a usage limit), fal (a key with a spend limit), Cloudflare R2 (a bucket with r2.dev public access and an S3 API token), Inngest (the Vercel integration), Upstash Redis.
+2. **S4:** OpenAI (a key with a usage limit), fal (a key with a spend limit and a funded balance), a Vercel Blob store connected to the project (it sets `BLOB_READ_WRITE_TOKEN`), Inngest (the Vercel integration), Upstash Redis.
 3. **S6:** a Google OAuth client, with `https://<live-url>/api/auth/callback/google` as the redirect URI.
 
 ## Submission checklist (from the brief)
