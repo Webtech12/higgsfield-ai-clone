@@ -13,6 +13,10 @@ describeMediaProviderContract("fake", () => {
     provider: new FakeMediaProvider(() => now),
     frameModel: routing.selectModel({ kind: "frame" }).id,
     videoModel: routing.selectModel({ kind: "video" }).id,
+    references: {
+      model: routing.selectModel({ kind: "frame", references: 2 }).id,
+      imageUrls: ["/talent.jpg", "/product.jpg"],
+    },
     wait: (ms) => {
       now += ms;
       return Promise.resolve();

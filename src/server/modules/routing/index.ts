@@ -21,6 +21,7 @@ export function createRoutingModule(deps: { provider: ProviderName }) {
       (m) =>
         m.provider === deps.provider &&
         m.kind === need.kind &&
+        m.isRetired !== true &&
         references >= m.references.min &&
         references <= m.references.max,
     );
@@ -40,6 +41,8 @@ export function createRoutingModule(deps: { provider: ProviderName }) {
 
   return {
     selectModel,
+    /** Every model this provider has, retired ones included: they still poll and retry. */
+    models: (): readonly ModelEntry[] => MODEL_REGISTRY.filter((m) => m.provider === deps.provider),
     priceOf: (modelId: string): number => find(modelId).creditCost,
     /** What a job costs right now, for the price on the button (AGENTS.md §1). */
     priceFor: (need: ModelNeed): number => selectModel(need).creditCost,

@@ -7,6 +7,8 @@ export interface MediaProviderHarness {
   provider: MediaProvider;
   frameModel: string;
   videoModel: string;
+  /** A frame model that draws from reference photos, and photos it can fetch; skipped if absent. */
+  references?: { model: string; imageUrls: string[] };
   /** Lets time pass between polls: a fake clock jumps, a real provider really waits. */
   wait(ms: number): Promise<void>;
   pollMs: number;
@@ -81,6 +83,29 @@ export function describeMediaProviderContract(
         });
 
         const status = await untilSettled(harness, requestId, harness.videoModel);
+        expect(status.state).toBe("completed");
+        if (status.state === "completed") expect(isUrl(status.outputUrl)).toBe(true);
+      },
+      harness.timeoutMs,
+    );
+
+    it.skipIf(!harness.references)(
+      "draws a frame from reference photos (ADR-024)",
+      async () => {
+        if (!harness.references) return;
+        const { model, imageUrls } = harness.references;
+        const { requestId } = await harness.provider.submit({
+          kind: "frame",
+          model,
+          prompt:
+            "Close-up: the person in image 1 holds the product from image 2 beside her cheek and smiles, soft window light, vertical composition, no added text",
+          aspectRatio: "9:16",
+          seed: "contract-reference-frame",
+          referenceImageUrls: imageUrls,
+          label: { title: "Contract", subtitle: "References" },
+        });
+
+        const status = await untilSettled(harness, requestId, model);
         expect(status.state).toBe("completed");
         if (status.state === "completed") expect(isUrl(status.outputUrl)).toBe(true);
       },

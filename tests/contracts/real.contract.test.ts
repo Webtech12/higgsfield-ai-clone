@@ -9,9 +9,10 @@ import { describeLLMProviderContract } from "./llmProvider.suite";
 import { describeMediaProviderContract } from "./mediaProvider.suite";
 
 /**
- * The real providers on the same suites. Opt-in, because it spends money (one frame, one 4 s video
- * and one plan: about $0.15): RUN_REAL_CONTRACTS=1 npx vitest run tests/contracts/real
- * Keys come from .env.local; they are never printed.
+ * The real providers on the same suites. Opt-in, because it spends money (one frame, one 4 s video,
+ * one plan and one coaching call: about $0.20): RUN_REAL_CONTRACTS=1 npx vitest run tests/contracts/real
+ * Set CONTRACT_REFERENCE_URLS to two comma-separated public photo URLs (a person, then a product) to
+ * also draw a frame from references ($0.04). Keys come from .env.local; they are never printed.
  */
 const isEnabled = process.env.RUN_REAL_CONTRACTS === "1";
 if (isEnabled) {
@@ -35,11 +36,20 @@ describe.skipIf(!isEnabled)("real providers", () => {
     return;
   }
   const routing = createRoutingModule({ provider: "fal" });
+  const referenceUrls = process.env.CONTRACT_REFERENCE_URLS?.split(",").filter(Boolean) ?? [];
 
   describeMediaProviderContract("fal", () => ({
     provider: new FalMediaProvider(required("FAL_KEY")),
     frameModel: routing.selectModel({ kind: "frame" }).id,
     videoModel: routing.selectModel({ kind: "video" }).id,
+    ...(referenceUrls.length > 0
+      ? {
+          references: {
+            model: routing.selectModel({ kind: "frame", references: referenceUrls.length }).id,
+            imageUrls: referenceUrls,
+          },
+        }
+      : {}),
     wait: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     pollMs: 3_000,
     maxPolls: 100,
