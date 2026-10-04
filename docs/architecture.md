@@ -8,6 +8,8 @@
 >
 > **Amended 2026-10-04** by [ADR-024](./adr/024-ad-studio-with-consenting-talent.md): Director makes ads. A `talent` module holds seeded, consenting talent; `media` stores brand photo uploads; storyboard frames use the talent's and product's photos as references; finished ads are assembled by fal's cloud ffmpeg.
 
+> **Amended 2026-10-05** by [ADR-026](./adr/026-realistic-frames-and-video.md): Nano Banana Pro draws frames and Kling v3 Pro animates them, with the talent and product as elements, so `production` depends on `talent`. Also by [ADR-027](./adr/027-one-free-trial-per-network.md): one free trial (a new guest) per network a day, made only by the `guestAccess` process, and daily allowances per network for free work.
+
 ---
 
 ## 0. Framing: build the seams, document the scale
@@ -79,15 +81,15 @@ flowchart LR
 | **projects** (Project & Continuity) | projects (ad brief, cast, photo references), directions (concepts), shots, elements | `createProject`, `applyPlan`, `selectDirection`, `updateShot`, `updateElements`, `reassignOwner` | identity |
 | **talent** (Talent roster) | `talents`: profiles, photos, consent record, active flag | `getCasting` | — |
 | **storyboard** | Frame generation and redraws, with talent and product photos as references | `generateFrames`, `redrawFrame` | projects, production, routing, director, talent |
-| **production** (Generation Engine) | assets, generation_jobs; generation workflows; stuck-job sweep; finishing an ad | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director |
+| **production** (Generation Engine) | assets, generation_jobs; generation workflows; stuck-job sweep; finishing an ad | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director, talent |
 | **remix** (Refine & Versioning) | Refinements of a finished ad → a new version | `refineAd` | projects, production, routing, credits, limits, director, talent |
 | **routing** (Smart Select) | Model registry, routing policy, pricing | `selectModel`, `priceOf` | — |
 | **credits** (Credits & Billing) | Append-only ledger | `grant`, `reserve`, `capture`, `release`, `transfer`, `balanceOf` | identity |
-| **limits** (Usage Limits & Abuse) | Rate limits, caps, kill-switch | `assertCanGenerate`, `assertWithinRate`, `recordUsage` | identity |
+| **limits** (Usage Limits & Abuse) | Rate limits, per-network trial and daily allowances, caps, kill-switch | `assertTrialAvailable`, `assertDailyAllowance`, `assertCanGenerate`, `assertWithinRate`, `recordUsage` | identity |
 | **media** (Storage & Delivery) | Object keys, brand photo uploads, persistence, delivery URLs | `persistFromUrl`, `saveUpload`, `getOwnedUploads` | — |
 
 Cross-cutting code that is **not** a domain module ([ADR-019](./adr/019-module-boundary-corrections.md)):
-- **Processes** live in `server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`, `createAd`). No module depends on a process.
+- **Processes** live in `server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`, `guestAccess`, `createAd`). No module depends on a process.
 - **Read queries** live in `server/queries/*`: read-only SQL for the workspace view and the gallery, the only code that reads across module tables.
 - **Provider Integration** lives in `server/integrations/*`: adapters implementing module ports.
 - **Live Status** comes from the workspace read query plus frontend polling.
@@ -116,6 +118,7 @@ flowchart TD
   remix --> limits
   storyboard --> routing
   storyboard --> talent
+  production --> talent
   director --> talent
   remix --> talent
   projects --> identity
@@ -139,7 +142,7 @@ server/modules/<module>/
 ```
 
 Supporting code lives outside the modules:
-- `server/processes/`: cross-module workflows (`mergeGuest`, `onboarding`) that call module public APIs.
+- `server/processes/`: cross-module workflows (`mergeGuest`, `onboarding`, `guestAccess`, `createAd`) that call module public APIs.
 - `server/queries/`: read-only SQL for the workspace view and gallery.
 - `server/integrations/`: vendor adapters (fal, openai, blob, upstash, resend) and a fake for each port.
 - `server/platform/`: the DB client, `UnitOfWork`, HTTP wrappers, the Inngest client, env and observability. The Better Auth instance and its generated schema live in `identity/infrastructure`.
@@ -433,8 +436,8 @@ REST under `/api/v1`, with contracts as zod schemas in `src/contracts` shared by
 
 | Threat | Control |
 |---|---|
-| Budget draining | Guest caps (tight) and user caps (looser); per-user and per-IP sliding windows (Upstash); a **global daily spend kill-switch** checked before every submit; users are routed to the demo project when caps are hit ([ADR-016](./adr/016-rate-limits-spend-kill-switch.md)) |
-| Bot-minted guest accounts | Guest identity created only on the first meaningful action; per-IP rate limit on anonymous sign-in |
+| Budget draining | Guest caps (tight) and user caps (looser); per-user hourly limits and per-network daily allowances for free work (Upstash, [ADR-027](./adr/027-one-free-trial-per-network.md)); a **global daily spend kill-switch** checked before every submit; users are routed to the demo project when caps are hit ([ADR-016](./adr/016-rate-limits-spend-kill-switch.md)) |
+| Bot-minted guest accounts | Guest identity created only on the first meaningful action; one free trial (a new guest) per network a day, where a network is an IPv4 address or an IPv6 /64; Better Auth's anonymous route disabled so the trial can't be skipped ([ADR-027](./adr/027-one-free-trial-per-network.md)) |
 | Session security | Better Auth sessions (httpOnly, Secure, SameSite=Lax); trusted origins configured; CSRF protection on auth routes |
 | Cross-user access | Ownership enforced in every query and command; the demo is read-only |
 | Forged webhooks | None accepted in v1: the workflow polls provider status ([ADR-018](./adr/018-lean-core-for-the-24-hour-build.md)) |

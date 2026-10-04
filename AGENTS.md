@@ -47,7 +47,10 @@ FPV) but organises the experience around the brand's intent instead of model sel
   and frames count toward the daily spend cap. Guests start with 40 credits (exactly 1 ad + 1
   refinement); signing in adds 60. The balance sits in the header, and every button that spends credits
   shows its cost.
-- **Caps:** 6 videos per guest, 18 per user, and a $10/day global spend kill-switch.
+- **Caps:** one free trial (a new guest) per network a day, and daily allowances per network for
+  free work: 2 briefs, 6 redraws, 6 retries, 10 Polish with AI calls and 20 photos
+  ([ADR-027](docs/adr/027-one-free-trial-per-network.md)). Also 6 videos per guest, 18 per user, and
+  a $10/day global spend kill-switch.
 - **Examples:** finished ads are shown with the briefs that made them, public and read-only. A
   signed-out visitor can watch them straight away.
 
@@ -70,7 +73,7 @@ voiceover/dialogue/lip-sync, a chat agent, real payments, collaboration, a timel
 | Transactional email | Resend for magic links once a domain exists; a fake sender that logs the link in dev, CI and E2E |
 | Durable workflows | Inngest. Generation workflows poll the provider's status; there are no webhooks in v1 ([ADR-018](docs/adr/018-lean-core-for-the-24-hour-build.md)) |
 | LLM | OpenAI Responses API (`openai`), structured outputs validated with zod, `DIRECTOR_MODEL=gpt-6-sol` ([ADR-020](docs/adr/020-openai-llm-provider.md)) |
-| Image / video / music models | fal.ai (`@fal-ai/client`) queue API, polled from the workflow. Models come from the bake-off ([ADR-025](docs/adr/025-models-chosen-by-bake-off.md)): Seedream 4.5 frames, MiniMax H3 Max video, ElevenLabs Music v2.5; their IDs live only in the routing registry. fal's cloud ffmpeg assembles finished ads ([ADR-024](docs/adr/024-ad-studio-with-consenting-talent.md)) |
+| Image / video / music models | fal.ai (`@fal-ai/client`) queue API, polled from the workflow. Models chosen for realism ([ADR-026](docs/adr/026-realistic-frames-and-video.md)): Nano Banana Pro frames, Kling v3 Pro video (from the storyboard frame, with the talent and product as elements), and ElevenLabs Music v2.5 ([ADR-025](docs/adr/025-models-chosen-by-bake-off.md)); their IDs live only in the routing registry. fal's cloud ffmpeg assembles finished ads ([ADR-024](docs/adr/024-ad-studio-with-consenting-talent.md)) |
 | Object storage | Vercel Blob (`@vercel/blob`), public, served from Vercel's CDN ([ADR-023](docs/adr/023-vercel-blob-media-storage.md)) |
 | Rate limits / idempotency store | Upstash Redis (`@upstash/ratelimit`, `@upstash/redis`) |
 | Validation | zod (shared client/server via `src/contracts`) |
@@ -98,15 +101,15 @@ The backend is a **modular monolith**. Each module owns its tables and exposes a
 | **projects** (Project & Continuity) | projects (with the ad brief, cast and photo references), directions (concepts), shots, elements | `createProject`, `applyPlan`, `selectDirection`, `updateShot`, `updateElements`, `reassignOwner` | identity |
 | **talent** (Talent roster) | `talents`: profiles, photos, consent record, active flag | `getCasting` | — |
 | **storyboard** | Frame generation and redraws, with talent and product photos as references | `generateFrames`, `redrawFrame` | projects, production, routing, director, talent |
-| **production** (Generation Engine) | assets, generation_jobs; generation workflows + stuck-job sweep; finishing an ad | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director |
+| **production** (Generation Engine) | assets, generation_jobs; generation workflows + stuck-job sweep; finishing an ad | `produceDirection`, `requestGeneration`, `retryAsset` | projects, routing, credits, limits, media, director, talent |
 | **remix** (Refine & Versioning) | Refinements of a finished ad (re-direct a shot, swap the talent, change the music, edit the text) → a new version with `parent_asset_id` | `refineAd` | projects, production, routing, credits, limits, director, talent |
 | **routing** (Model Routing / Smart Select) | Model registry, routing policy, pricing | `selectModel`, `priceOf` | — |
 | **credits** (Credits & Billing) | Append-only credit ledger | `grant`, `reserve`, `capture`, `release`, `transfer`, `balanceOf` | identity |
-| **limits** (Usage Limits & Abuse Protection) | Rate limits, guest/user caps, global spend kill-switch | `assertCanGenerate`, `assertWithinRate`, `recordUsage` | identity |
+| **limits** (Usage Limits & Abuse Protection) | Rate limits, per-network trial and daily allowances, guest/user caps, global spend kill-switch | `assertTrialAvailable`, `assertDailyAllowance`, `assertCanGenerate`, `assertWithinRate`, `recordUsage` | identity |
 | **media** (Media Storage & Delivery) | Object keys, brand photo `uploads`, persistence from provider URLs, delivery URLs | `persistFromUrl`, `saveUpload`, `getOwnedUploads` | — |
 
 Cross-cutting code that is not a domain module ([ADR-019](docs/adr/019-module-boundary-corrections.md)):
-- **Processes** → `src/server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`, `createAd`). A process may depend on any module; no module depends on a process.
+- **Processes** → `src/server/processes/*`: workflows that coordinate several modules through their public APIs (`mergeGuest`, `onboarding`, `guestAccess`, `createAd`). A process may depend on any module; no module depends on a process.
 - **Read queries** → `src/server/queries/*`: read-only SQL for the workspace view (`getWorkspaceView`) and the gallery (`listProjects`). The only code that may read across module tables. It never writes.
 - **Provider Integration** → `src/server/integrations/*` (fal, openai, blob, upstash, resend, and a fake for each port). These are adapters implementing module ports.
 - **Live Status & Updates** → the workspace read query + the frontend `useProject` polling hook.
@@ -174,6 +177,10 @@ Scripts are tooling outside the app, so they may call `pg`, `@vercel/blob` or `@
 - **No login wall.** The app, the demo project and the gallery open without signing in.
 - A guest identity is created with Better Auth's `anonymous` plugin **on the first meaningful action**
   (uploading a photo, polishing a brief or submitting one), not on page load. This avoids bot-created rows.
+  The browser starts it once with `POST /api/v1/session`, shared by concurrent actions.
+- **A new guest is a free trial: one per network a day** (an IPv4 address or an IPv6 /64), checked by
+  the `guestAccess` process ([ADR-027](docs/adr/027-one-free-trial-per-network.md)). Better Auth's own
+  `/sign-in/anonymous` route is disabled, so `guestAccess` is the only way a guest is made.
 - **All data is owned by `user_id`.** Guests are users with `isAnonymous = true`. There are no separate "session-owned" tables.
 - Sign-in methods: Google OAuth and magic link. The live app shows only Google until a domain is verified
   ([ADR-022](docs/adr/022-no-custom-domain-yet.md)); magic link with the fake email sender is what the E2E tests use.

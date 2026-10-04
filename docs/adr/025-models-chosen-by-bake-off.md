@@ -1,6 +1,6 @@
 # ADR-025: Models chosen by a bake-off
 
-- **Status:** Accepted
+- **Status:** Accepted; the frame and video choices are superseded by [ADR-026](./026-realistic-frames-and-video.md) (2026-10-05)
 - **Date:** 2026-10-04
 - **Related:** [ADR-008](./008-provider-ports-model-registry.md) · [ADR-017](./017-storyboard-frame-as-first-frame.md) · [ADR-024](./024-ad-studio-with-consenting-talent.md) · `scripts/model-bakeoff.mjs`
 
