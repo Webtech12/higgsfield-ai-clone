@@ -12,7 +12,12 @@ import {
 import { UsageRepository } from "./infrastructure/UsageRepository";
 import type { RateLimiter } from "./ports/RateLimiter";
 
-export type { CapPolicy } from "./domain/caps";
+export {
+  DailyBudgetReachedError,
+  LimitReachedError,
+  RateLimitedError,
+  type CapPolicy,
+} from "./domain/caps";
 export type { RateLimiter } from "./ports/RateLimiter";
 
 export function createLimitsModule(deps: {
@@ -41,6 +46,14 @@ export function createLimitsModule(deps: {
       if (totals.globalSpendCents > deps.policy.dailySpendCapCents) {
         throw new DailyBudgetReachedError("Director has reached today's generation budget");
       }
+    },
+
+    /**
+     * Counts provider spend for free work (storyboard frames, redraws) toward the global kill-switch
+     * (AGENTS.md §1). Paid work records its spend with its credits, inside the money path.
+     */
+    async recordFreeSpend(spendCents: number): Promise<void> {
+      if (spendCents > 0) await usage.addGlobalSpend(usageDay(now()), spendCents);
     },
 
     /** Cheap pre-check before any provider work: is the global kill-switch already tripped? */

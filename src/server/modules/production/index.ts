@@ -33,7 +33,12 @@ export function createProductionModule(deps: {
   newId: (prefix: string) => string;
 }) {
   const assets = new AssetRepository(deps.db);
-  const request = new RequestGeneration({ assets, routing: deps.routing, newId: deps.newId });
+  const request = new RequestGeneration({
+    assets,
+    routing: deps.routing,
+    limits: deps.limits,
+    newId: deps.newId,
+  });
   const submit = new SubmitGeneration({ assets, provider: deps.provider });
   const check = new CheckGeneration({ assets, ...deps });
   const fail = new FailGeneration({ assets, credits: deps.credits });

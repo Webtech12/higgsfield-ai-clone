@@ -50,6 +50,17 @@ export class UsageRepository {
     return { userVideos: user?.videos ?? 0, globalSpendCents: global?.spendCents ?? 0 };
   }
 
+  /** Adds spend that no one paid credits for (frames, redraws) to today's global counter. */
+  async addGlobalSpend(day: string, spendCents: number): Promise<void> {
+    await this.db
+      .insert(usageDaily)
+      .values({ day, ...GLOBAL, videos: 0, spendCents })
+      .onConflictDoUpdate({
+        target: [usageDaily.day, usageDaily.scope, usageDaily.scopeId],
+        set: { spendCents: sql`${usageDaily.spendCents} + ${spendCents}` },
+      });
+  }
+
   async today(
     day: string,
     userId: string,

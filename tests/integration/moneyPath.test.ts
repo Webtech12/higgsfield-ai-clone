@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { InMemoryRateLimiter } from "@/server/integrations/fake/InMemoryRateLimiter";
 import { createCreditsModule, InsufficientCreditsError } from "@/server/modules/credits";
-import { createLimitsModule } from "@/server/modules/limits";
+import { createLimitsModule, DailyBudgetReachedError } from "@/server/modules/limits";
 import { createDb, createUnitOfWork } from "@/server/platform/db";
 
 import { loadTestEnv } from "./env";
@@ -102,5 +102,17 @@ describe("money path (real Postgres)", () => {
     // Guest cap is 6 videos a day: exactly two productions of 3 fit.
     expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(2);
     expect((await limits.usageToday("usr_cap", true)).videos).toBe(6);
+  });
+
+  it("free work (storyboard frames) counts toward the daily kill-switch", async () => {
+    await expect(limits.assertCanGenerate("usr_frames")).resolves.toBeUndefined();
+
+    // The test budget is $10: 334 frames at 3 cents each just passes it.
+    await Promise.all(Array.from({ length: 334 }, () => limits.recordFreeSpend(3)));
+
+    await expect(limits.assertCanGenerate("usr_frames")).rejects.toBeInstanceOf(
+      DailyBudgetReachedError,
+    );
+    expect((await limits.usageToday("usr_frames", true)).videos).toBe(0);
   });
 });
