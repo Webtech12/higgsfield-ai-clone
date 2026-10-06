@@ -1,3 +1,11 @@
+export {
+  AD_STATUS_META,
+  hasAdsInProgress,
+  timeAgo,
+  toAdCard,
+  type AdCardModel,
+  type AdStatusMeta,
+} from "./model/adCard";
 export { projectKeys, type WorkspaceSnapshot } from "./api/queries";
 export { useProject } from "./hooks/useProject";
 export {
