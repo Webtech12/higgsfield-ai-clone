@@ -40,7 +40,8 @@ export function Workspace({ initial }: { initial: WorkspaceSnapshot }) {
             className="mt-4 animate-rise font-display text-4xl leading-[0.95] font-semibold tracking-[-0.035em] sm:text-6xl"
             style={{ animationDelay: "80ms" }}
           >
-            {view.title}
+            {/* Keeps a title's "·" with the words before it, so no line starts with one. */}
+            {view.title.replaceAll(" · ", " · ")}
           </h1>
           <p
             className="mt-5 max-w-2xl animate-rise text-base leading-relaxed text-muted-foreground"

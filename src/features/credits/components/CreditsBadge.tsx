@@ -11,14 +11,17 @@ export function CreditsBadge() {
 
   return (
     <p
-      className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground"
+      className="inline-flex shrink-0 items-center gap-2 rounded-full border border-border px-3 py-1 text-xs whitespace-nowrap text-muted-foreground"
       aria-live="polite"
     >
       <Coins className="size-3.5 text-primary" aria-hidden />
       <span>
         <span className="font-medium text-foreground">{data.credits}</span> credits
       </span>
-      {data.user.isGuest ? <span className="text-muted-foreground/80">· Guest</span> : null}
+      {/* On a phone the header has room for the balance only. */}
+      {data.user.isGuest ? (
+        <span className="hidden text-muted-foreground/80 sm:inline">· Guest</span>
+      ) : null}
     </p>
   );
 }

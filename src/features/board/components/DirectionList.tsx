@@ -57,12 +57,12 @@ function ConceptComparison({ view, actions }: { view: WorkspaceView; actions: Bo
       <p className="mb-5 text-sm text-muted-foreground lg:hidden">Swipe to compare all three.</p>
       <ol
         aria-label="Concepts"
-        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-5 lg:overflow-visible lg:px-0"
+        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-3 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-x-5 lg:gap-y-0 lg:overflow-visible lg:px-0"
       >
         {view.directions.map((direction, index) => (
           <li
             key={direction.id}
-            className="w-[86%] shrink-0 animate-rise snap-center sm:w-[60%] lg:w-auto"
+            className="w-[86%] shrink-0 animate-rise snap-center sm:w-[60%] lg:row-span-7 lg:grid lg:w-auto lg:grid-rows-subgrid"
             style={{ animationDelay: `${String(index * 110)}ms` }}
           >
             <ConceptCard

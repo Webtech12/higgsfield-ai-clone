@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, LoaderCircle } from "lucide-react";
+import { AlertTriangle, LoaderCircle, Play } from "lucide-react";
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 
 import type { AspectRatio } from "@/contracts/brief";
@@ -107,6 +107,22 @@ export function SequencePlayer({ film, player }: { film: Film; player: Player })
           ) : null,
         )}
         {current && current.video.kind !== "ready" ? <PendingShot shot={current} /> : null}
+        {current?.video.kind === "ready" && !state.isPlaying ? (
+          // A play mark on the picture itself, in reach without scrolling to the controls. The
+          // labelled "Play ad" button below is the control for keyboards and screen readers, so
+          // this one stays out of their way.
+          <button
+            type="button"
+            aria-hidden
+            tabIndex={-1}
+            onClick={player.toggle}
+            className="group/play absolute inset-0 grid cursor-pointer place-items-center"
+          >
+            <span className="grid size-18 place-items-center rounded-full bg-black/55 ring-1 ring-white/20 backdrop-blur-md transition-transform duration-500 ease-out-expo group-hover/play:scale-110">
+              <Play className="ml-1 size-7 fill-white text-white" />
+            </span>
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-4 flex gap-1" aria-hidden>

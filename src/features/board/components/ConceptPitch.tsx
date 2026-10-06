@@ -10,9 +10,11 @@ import { cn } from "@/shared/lib/cn";
 export function ConceptPitch({
   pitch,
   layout = "row",
+  className,
 }: {
   pitch: ConceptPitchModel;
   layout?: "row" | "stack";
+  className?: string;
 }) {
   const isStack = layout === "stack";
   const item = cn(
@@ -22,7 +24,13 @@ export function ConceptPitch({
   );
   const term = "flex items-center gap-1.5 text-xs font-medium text-muted-foreground";
   return (
-    <dl className={cn("text-sm", isStack ? "mt-5 space-y-3" : "mt-6 grid gap-3 sm:grid-cols-3")}>
+    <dl
+      className={cn(
+        "text-sm",
+        isStack ? "mt-5 space-y-3" : "mt-6 grid gap-3 sm:grid-cols-3",
+        className,
+      )}
+    >
       <div className={item}>
         <dt className={term}>
           <Sparkles className="size-3.5 text-primary" aria-hidden /> Hook

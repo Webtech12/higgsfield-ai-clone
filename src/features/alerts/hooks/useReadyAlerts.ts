@@ -11,16 +11,28 @@ import { notificationPermission } from "./useNotificationPermission";
 /** The brand mark with a neon dot (public/icon-ready.svg). */
 const READY_ICON = "/icon-ready.svg";
 
-/** Puts the ad's progress in front of the page's title, and puts the title back afterwards. */
+/**
+ * Puts the ad's progress in front of the page's title, and puts the title back afterwards. Next.js
+ * streams a page's <title> in after the page itself renders, so the head is watched and the prefix
+ * put back whenever the title is replaced.
+ */
 function useTabTitle(prefix: string | null) {
   useEffect(() => {
     if (!prefix) return;
-    const base = document.title;
-    const titled = `${prefix} · ${base}`;
-    document.title = titled;
+    const lead = `${prefix} · `;
+    let base = document.title;
+    const apply = () => {
+      if (document.title.startsWith(lead)) return;
+      base = document.title;
+      document.title = `${lead}${base}`;
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
     return () => {
+      observer.disconnect();
       // A navigation may already have given the tab the next page's title: only undo our own.
-      if (document.title === titled) document.title = base;
+      if (document.title === `${lead}${base}`) document.title = base;
     };
   }, [prefix]);
 }

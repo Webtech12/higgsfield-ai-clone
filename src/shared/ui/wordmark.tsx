@@ -13,7 +13,7 @@ export function Wordmark({ className }: { className?: string }) {
       >
         CT
       </span>
-      <span className="font-display text-[1.05rem] leading-none font-semibold tracking-tight">
+      <span className="font-display text-[1.05rem] leading-none font-semibold tracking-tight whitespace-nowrap">
         Citrus Talent <span className="font-normal text-muted-foreground">Studio</span>
       </span>
     </span>
