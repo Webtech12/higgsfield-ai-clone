@@ -14,17 +14,18 @@ import type { useBoardActions } from "../hooks/useBoardActions";
 type ProduceMutation = ReturnType<typeof useBoardActions>["produce"];
 
 /**
- * The step from storyboard to film. It shows the price before anything is spent and says plainly
+ * The step from storyboard to ad. It shows the price before anything is spent and says plainly
  * why producing can't start: frames still drawing, not enough credits, or today's cap (AGENTS.md §1).
  */
 export function ProduceBar({ view, produce }: { view: WorkspaceView; produce: ProduceMutation }) {
   const readiness = produceReadiness(view);
   return (
-    <div className="mt-4 flex flex-col gap-4 rounded-xl border border-dashed border-border p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="max-w-xl space-y-1 text-sm">
-        <p className="font-medium">Ready to shoot?</p>
-        <p className="text-muted-foreground">
-          Each shot becomes a video that starts from its storyboard frame.
+    <div className="mt-6 flex flex-col gap-5 rounded-3xl border border-border bg-[radial-gradient(120%_160%_at_100%_0%,rgb(150_202_74/10%),transparent_55%)] p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+      <div className="max-w-xl space-y-1.5 text-sm">
+        <p className="font-display text-xl font-semibold tracking-[-0.01em]">Ready to shoot?</p>
+        <p className="leading-relaxed text-muted-foreground">
+          Each shot becomes lifelike video that starts from its storyboard frame. Rendering takes
+          about 8 minutes.
         </p>
         {readiness.staleCount > 0 ? (
           <p className="text-primary">
@@ -54,6 +55,7 @@ function ProduceButton({
   return (
     <div className="flex flex-col items-start gap-1.5 sm:items-end sm:text-right">
       <Button
+        size="lg"
         onClick={() => {
           produce.mutate();
         }}

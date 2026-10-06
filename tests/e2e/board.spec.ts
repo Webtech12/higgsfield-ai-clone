@@ -31,15 +31,17 @@ test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", a
   await page.getByRole("button", { name: "Apply", exact: true }).first().click();
   await expect(page.getByLabel("Call to action")).toHaveValue("Try LUMA Vitamin C Serum today");
 
-  // Casting is a click on the talent's card, which is the label of a visually hidden radio.
-  await page.getByText("Ava Moreno", { exact: true }).click();
+  // Casting is a click on the talent's card, which is the label of a visually hidden radio. The
+  // talent wall above the brief shows the same faces, so the click is scoped to the Cast step.
+  await page.locator("#cast").getByText("Ava Moreno", { exact: true }).click();
   await expect(page.getByLabel(/^Cast Ava Moreno/)).toBeChecked();
   await page.getByRole("button", { name: "Create 3 concepts" }).click();
 
   await expect(page).toHaveURL(/\/p\/prj_/, { timeout: 60_000 });
   await expect(page.getByText("Starring Ava Moreno")).toBeVisible();
   await expect(page.getByText(/Storyboards ready/)).toBeVisible({ timeout: 120_000 });
-  await expect(page.getByRole("img", { name: /in frame$/ })).toHaveCount(9);
+  // Each frame is the button that enlarges it, so count the frames by their pictures.
+  await expect(page.locator('img[alt$="in frame"]')).toHaveCount(9);
   await expect(page.getByText("End card")).toHaveCount(3);
   await expect(page.getByRole("button", { name: "Choose this concept" })).toHaveCount(3);
 

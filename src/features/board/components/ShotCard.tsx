@@ -9,6 +9,7 @@ import { CAMERA_MOVE_LABEL, frameState } from "@/entities/project";
 import { Button } from "@/shared/ui";
 
 import { FrameImage } from "./FrameImage";
+import { FramePreview } from "./FramePreview";
 import { ShotEditor } from "./ShotEditor";
 
 export interface ShotCardActions {
@@ -18,7 +19,61 @@ export interface ShotCardActions {
   onRedraw: () => void;
 }
 
-/** One storyboard shot. Editable only in the chosen direction, by its owner. */
+/** A shot's frame; once drawn, it opens large on click. */
+function ShotFrame({
+  shot,
+  ratio,
+  number,
+  isCompact,
+}: {
+  shot: ShotView;
+  ratio: AspectRatio;
+  number: number;
+  isCompact: boolean;
+}) {
+  const state = frameState(shot);
+  const frame = (
+    <FrameImage
+      state={state}
+      ratio={ratio}
+      alt={`${shot.title}: ${shot.description}`}
+      isCompact={isCompact}
+    />
+  );
+  return state.kind === "ready" ? (
+    <FramePreview shot={shot} number={number} ratio={ratio} url={state.url}>
+      {frame}
+    </FramePreview>
+  ) : (
+    frame
+  );
+}
+
+/** A shot at comparison size: the frame, the beat and the camera, nothing more. */
+export function CompactShot({
+  shot,
+  ratio,
+  number,
+}: {
+  shot: ShotView;
+  ratio: AspectRatio;
+  number: number;
+}) {
+  return (
+    <li className="flex min-w-0 flex-col">
+      <ShotFrame shot={shot} ratio={ratio} number={number} isCompact />
+      <p className="mt-2 truncate text-xs font-semibold">
+        <span className="sr-only">Shot {number}: </span>
+        {shot.title}
+      </p>
+      <p className="truncate text-[11px] text-muted-foreground">
+        {CAMERA_MOVE_LABEL[shot.cameraMove]} · {shot.durationS}s
+      </p>
+    </li>
+  );
+}
+
+/** One storyboard shot in full. Editable only in the chosen concept, by its owner. */
 export function ShotCard({
   shot,
   ratio,
@@ -35,15 +90,15 @@ export function ShotCard({
 
   return (
     <li className="flex flex-col">
-      <FrameImage state={state} ratio={ratio} alt={`${shot.title}: ${shot.description}`} />
-      <div className="mt-2.5 flex items-baseline justify-between gap-2">
-        <h4 className="text-sm font-medium">
-          <span className="mr-1.5 font-mono text-xs text-muted-foreground" aria-hidden>
+      <ShotFrame shot={shot} ratio={ratio} number={number} isCompact={false} />
+      <div className="mt-3 flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold">
+          <span className="mr-1.5 text-xs text-primary tabular-nums" aria-hidden>
             {number}
           </span>
           <span className="sr-only">Shot {number}: </span>
           {shot.title}
-        </h4>
+        </h3>
         <span className="shrink-0 text-xs text-muted-foreground">
           {CAMERA_MOVE_LABEL[shot.cameraMove]} · {shot.durationS}s
         </span>
@@ -68,10 +123,11 @@ export function ShotCard({
       )}
 
       {actions && !isEditing ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button
             variant="ghost"
             size="sm"
+            className="-ml-2"
             onClick={() => {
               setIsEditing(true);
             }}
@@ -79,7 +135,9 @@ export function ShotCard({
           >
             <Pencil aria-hidden /> Edit
           </Button>
-          {shot.frameStale ? <span className="text-xs text-primary">Frame out of date</span> : null}
+          {shot.frameStale ? (
+            <span className="text-xs font-medium text-primary">Frame out of date</span>
+          ) : null}
           {/* A failed frame blocks production, so it can be redrawn without editing first. */}
           {shot.frameStale || state.kind === "failed" ? (
             <Button

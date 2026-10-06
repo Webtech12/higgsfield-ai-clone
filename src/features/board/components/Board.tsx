@@ -9,9 +9,9 @@ import { Button } from "@/shared/ui";
 
 import { useBoardActions } from "../hooks/useBoardActions";
 import { DirectionList } from "./DirectionList";
-import { PlanningSkeleton } from "./PlanningSkeleton";
+import { PlanningProgress } from "./PlanningProgress";
 
-/** The Board: the plan while the Director writes it, then three storyboarded directions to pick from. */
+/** The Board: the plan while it's written, then three storyboarded concepts to compare and pick from. */
 export function Board({ view }: { view: WorkspaceView }) {
   const actions = useBoardActions(view.id);
   // Produce reports its own errors next to its button.
@@ -19,7 +19,7 @@ export function Board({ view }: { view: WorkspaceView }) {
     (m) => m.isError,
   )?.error;
 
-  if (view.status === "planning") return <PlanningSkeleton />;
+  if (view.status === "planning") return <PlanningProgress />;
   if (view.status === "failed") return <PlanFailed />;
   return (
     <>
@@ -35,9 +35,11 @@ export function Board({ view }: { view: WorkspaceView }) {
 
 function PlanFailed() {
   return (
-    <div className="flex max-w-xl flex-col items-start gap-4 rounded-xl border border-border p-6">
-      <AlertTriangle className="size-6 text-destructive" aria-hidden />
-      <p>
+    <div className="flex max-w-xl flex-col items-start gap-4 rounded-3xl border border-border p-7">
+      <span className="grid size-10 place-items-center rounded-full bg-destructive/12 text-destructive">
+        <AlertTriangle className="size-5" aria-hidden />
+      </span>
+      <p className="leading-relaxed">
         We couldn&apos;t turn this brief into concepts. Try rewording it, or give it a little more
         detail.
       </p>
