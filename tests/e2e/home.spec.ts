@@ -11,7 +11,7 @@ test("a first-time visitor lands on the talent wall and the brief", async ({ pag
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Cast an icon");
   await expect(page.getByRole("radio", { name: /UGC testimonial/ })).toBeChecked();
   await expect(page.getByRole("radio", { name: /9:16/ })).toBeChecked();
-  await expect(page.getByLabel(/^Cast /)).toHaveCount(5);
+  await expect(page.getByRole("radio", { name: /^Cast / })).toHaveCount(5);
   expect(consoleErrors).toEqual([]);
 });
 
@@ -47,5 +47,5 @@ test("a talent's profile shows their consent on file", async ({ page }) => {
   await dialog.getByRole("button", { name: /^Cast / }).click();
 
   await expect(dialog).toBeHidden();
-  await expect(page.getByLabel(/^Cast /).first()).toBeChecked();
+  await expect(page.getByRole("radio", { name: /^Cast / }).first()).toBeChecked();
 });

@@ -4,7 +4,7 @@ import { expect, test, TINY_PNG } from "./fixtures";
 
 async function writeBrief(page: Page) {
   await page.goto("/");
-  await page.getByLabel("Product", { exact: true }).fill("LUMA Vitamin C Serum");
+  await page.getByLabel("Product name").fill("LUMA Vitamin C Serum");
   await page
     .getByLabel("Why it matters")
     .fill("Brighter, more even-looking skin from a two-minute morning routine");
@@ -40,8 +40,10 @@ test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", a
   await expect(page).toHaveURL(/\/p\/prj_/, { timeout: 60_000 });
   await expect(page.getByText("Starring Ava Moreno")).toBeVisible();
   await expect(page.getByText(/Storyboards ready/)).toBeVisible({ timeout: 120_000 });
-  // The tab says so too, for a brand who went to another tab while the concepts were written.
+  // The tab says so too, for a brand who went to another tab while the concepts were written, and
+  // the arrival gets its own message.
   await expect(page).toHaveTitle(/^✓ Concepts ready · /);
+  await expect(page.getByText("Your three concepts are ready")).toBeVisible();
   // Each frame is the button that enlarges it, so count the frames by their pictures.
   await expect(page.locator('img[alt$="in frame"]')).toHaveCount(9);
   await expect(page.getByText("End card")).toHaveCount(3);
@@ -74,6 +76,7 @@ test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", a
     timeout: 120_000,
   });
   await expect(page).toHaveTitle(/^✓ Your ad is ready · /);
+  await expect(page.getByText("Your ad is ready", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /^Download shot/ })).toHaveCount(3);
 
   // Downloads stream through our route under a friendly name, not the storage key.
@@ -98,7 +101,7 @@ test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", a
 test("an incomplete brief is explained, not sent", async ({ page }) => {
   test.setTimeout(90_000);
   await page.goto("/");
-  await page.getByLabel("Product", { exact: true }).fill("L");
+  await page.getByLabel("Product name").fill("L");
   await page.getByRole("button", { name: "Create 3 concepts" }).click();
 
   await expect(page.getByText("Name the product in 2 to 60 characters.")).toBeVisible();

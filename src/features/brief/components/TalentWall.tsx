@@ -48,8 +48,9 @@ export function TalentWall({
         aria-hidden
         className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(90deg,rgb(5_5_5/94%)_0%,rgb(5_5_5/70%)_42%,rgb(5_5_5/10%)_78%),linear-gradient(0deg,rgb(5_5_5/90%)_0%,transparent_45%)] md:block"
       />
+      {/* The words let clicks through to the faces behind them; only the buttons take them. */}
       <div className="pointer-events-none relative mx-auto flex min-h-[64svh] w-full max-w-7xl flex-col justify-end px-4 pt-16 pb-10 sm:px-6 md:min-h-[min(78svh,760px)] md:pb-16">
-        <div className="pointer-events-auto max-w-3xl">
+        <div className="max-w-3xl">
           <p className="animate-rise text-xs font-semibold tracking-[0.22em] text-primary uppercase">
             Citrus Talent Studio
           </p>
@@ -72,7 +73,7 @@ export function TalentWall({
             a minute. The one you choose becomes a finished ad.
           </p>
           <div
-            className="mt-9 flex animate-rise flex-wrap gap-3"
+            className="pointer-events-auto mt-9 flex animate-rise flex-wrap gap-3"
             style={{ animationDelay: "400ms" }}
           >
             <Button asChild size="lg">

@@ -21,8 +21,9 @@ export function MoreDirection({
 }) {
   const id = useId();
   return (
+    // The region is named by its title alone; the summary under it belongs to the button.
     <section
-      aria-labelledby={`${id}-heading`}
+      aria-labelledby={`${id}-title`}
       className={cn(
         "rounded-2xl border transition-colors duration-300",
         isOpen
@@ -30,7 +31,7 @@ export function MoreDirection({
           : "border-dashed border-border hover:border-foreground/25",
       )}
     >
-      <h2 id={`${id}-heading`}>
+      <h2>
         <button
           type="button"
           aria-expanded={isOpen}
@@ -39,7 +40,10 @@ export function MoreDirection({
           className="flex w-full items-center justify-between gap-4 rounded-2xl p-5 text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:p-6"
         >
           <span>
-            <span className="font-display text-lg font-semibold tracking-[-0.01em]">
+            <span
+              id={`${id}-title`}
+              className="font-display text-lg font-semibold tracking-[-0.01em]"
+            >
               More direction
             </span>
             <span className="ml-2 text-sm text-muted-foreground">Optional</span>

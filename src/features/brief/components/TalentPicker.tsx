@@ -32,7 +32,9 @@ export function TalentPicker({
     );
   }
   return (
-    <fieldset className="flex flex-col gap-2">
+    // min-w-0: a fieldset is as wide as its content by default, so the roster wouldn't scroll on
+    // a phone; it would stretch the page instead.
+    <fieldset className="flex min-w-0 flex-col gap-2">
       <legend className="sr-only">Talent</legend>
       <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 xl:grid-cols-5">
         {allowNone ? (

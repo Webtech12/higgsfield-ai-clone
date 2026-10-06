@@ -22,7 +22,9 @@ export function TemplatePicker({
   const selected = AD_TEMPLATES[value];
   return (
     <div className="flex flex-col gap-4">
-      <fieldset>
+      {/* min-w-0: a fieldset is as wide as its content by default, which would stretch the page
+          sideways on a phone instead of letting the formats scroll. */}
+      <fieldset className="min-w-0">
         <legend className="sr-only">Ad format</legend>
         <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 xl:grid-cols-5">
           {AD_TEMPLATE_IDS.map((id) => {

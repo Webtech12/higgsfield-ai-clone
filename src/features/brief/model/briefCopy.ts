@@ -11,7 +11,9 @@ interface FieldCopy {
 
 export const FIELD_COPY = {
   productName: {
-    label: "Product",
+    // Not just "Product": that's the step's heading, and two things with one name confuse screen
+    // reader users moving between fields and sections.
+    label: "Product name",
     placeholder: "LUMA Vitamin C Serum",
     hint: "The name viewers should remember.",
     error: "Name the product in 2 to 60 characters.",

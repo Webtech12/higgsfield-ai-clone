@@ -13,18 +13,21 @@ test("the Talent page casts someone in a new brief", async ({ page }) => {
   await expect(dialog.getByText(/Release signed/)).toBeVisible();
   await dialog.getByRole("link", { name: /Cast in a new ad/ }).click();
 
-  await expect(page).toHaveURL(/\/\?talent=.+#brief$/);
+  // Create is rendered per request, so the navigation waits on the server.
+  await expect(page).toHaveURL(/\/\?talent=.+#brief$/, { timeout: 30_000 });
   await expect(page.getByLabel(/^Cast Kai Okafor/)).toBeChecked();
 });
 
 test("My ads keeps each ad, and Make another starts from its brief", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/");
-  await page.getByLabel("Product", { exact: true }).fill("Aero Bottle");
+  await page.getByLabel("Product name").fill("Aero Bottle");
   await page.getByLabel("Why it matters").fill("Keeps water ice-cold through a full day out");
   await page.getByText("Product hero", { exact: true }).click();
   await page.getByRole("button", { name: "Create 3 concepts" }).click();
   await expect(page).toHaveURL(/\/p\/prj_/, { timeout: 60_000 });
+  // An ad is named when its concepts are written.
+  await expect(page.getByText(/Storyboards ready/)).toBeVisible({ timeout: 90_000 });
 
   await page.goto("/ads");
   const card = page.getByRole("article").filter({ hasText: "Aero Bottle" });
@@ -32,7 +35,7 @@ test("My ads keeps each ad, and Make another starts from its brief", async ({ pa
   await card.getByRole("link", { name: /^Make another ad like/ }).click();
 
   await expect(page).toHaveURL(/\/\?from=prj_/);
-  await expect(page.getByLabel("Product", { exact: true })).toHaveValue("Aero Bottle");
+  await expect(page.getByLabel("Product name")).toHaveValue("Aero Bottle");
   await expect(page.getByRole("radio", { name: /Product hero/ })).toBeChecked();
 });
 
