@@ -31,5 +31,6 @@ Each ADR records one significant decision: its context, the decision, the altern
 | [025](./025-models-chosen-by-bake-off.md) | Models chosen by a bake-off | Accepted; frames and video superseded by 026 |
 | [026](./026-realistic-frames-and-video.md) | Realistic frames and video: Nano Banana Pro and Kling v3 Pro | Accepted |
 | [027](./027-one-free-trial-per-network.md) | One free trial per network a day | Accepted |
+| [028](./028-citrus-talent-studio-brand-and-return-loop.md) | Citrus Talent Studio: the brand, the app shell and the way back in | Accepted |
 
 To add a decision, copy [`000-template.md`](./000-template.md) to the next number.

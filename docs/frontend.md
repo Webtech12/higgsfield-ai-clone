@@ -18,9 +18,10 @@
 
 | Route | Rendering | Why |
 |---|---|---|
-| `/` (Brief) | RSC shell (static) + client `BriefForm` island | Instant load; the only interactive part is the form |
+| `/` (Create) | RSC, dynamic: reads the roster, the viewer's recent ads and any `?talent=` / `?from=` start, then a client `AdBriefComposer` island | The talent wall and the brief are one interactive surface; the starting values come from the server, so nothing flashes |
 | `/p/[projectId]` (Board / Studio) | RSC loads the project aggregate server-side → hydrates the TanStack Query cache → client workspace polls for updates | No loading spinner on first paint; live updates afterward; one render path for both phases |
-| `/projects` | RSC, dynamic (session-scoped) | Simple list, no client state needed |
+| `/ads` (My ads) | RSC, dynamic (session-scoped); `router.refresh()` every 8 s while an ad is in progress | A simple list that stays current without client state |
+| `/talent` (Talent) | RSC, dynamic: the roster changes without a deploy | Read-only; only the profile dialog is client-side |
 | `error.tsx` / `not-found.tsx` / `loading.tsx` per segment | Next.js file conventions | Failures are contained to their route segment and every one has a designed state |
 
 **How reads and writes are split:**
@@ -215,14 +216,29 @@ export const assetStatusMeta = {
 
 ## 7. Design system and accessibility
 
-- **Tokens as CSS variables** (colour, radius, spacing, motion durations) mapped into the Tailwind theme. The dark cinematic theme is a token set, not scattered hex codes.
+- **Tokens as CSS variables** (colour, radius, spacing, motion) mapped into the Tailwind theme in `src/app/globals.css`. The Citrus Talent theme ([ADR-028](./adr/028-citrus-talent-studio-brand-and-return-loop.md)) is a token set, not scattered hex codes:
+  - **Colour:**
+    - `--background` `#0a0a0a` and `--foreground` `#fafaf9` (near-black and off-white, never pure).
+    - `--primary` `#96ca4a` (Citrus green) and `--neon` `#d8ff36`, used sparingly: selection and work in progress.
+    - `--primary-ink` for green text: it is `#4f7a1c` inside a `.surface-light` band, where the brand green fails contrast.
+  - **Type:** `font-display` is Epilogue for headings and names; Geist is the interface text.
+  - **Shape:** pill buttons; `rounded-2xl` cards and dialogs.
+  - **Motion:**
+    - Curves: `ease-out-expo`, `ease-out-quart` and `ease-in-out-expo`. There is no `linear` or default `ease`, except progress that tracks time.
+    - Keyframes: `animate-rise` (entrances), `animate-wipe` (a frame arriving), `animate-toast` and `animate-sweep` (work in progress).
 - **shadcn/Radix primitives wrapped in `shared/ui`.** Features import `@/shared/ui`, never Radix directly, so the design system has a single point of change.
 - **Accessibility built in:**
   - Radix provides focus management for sheets and dialogs.
   - An `aria-live="polite"` region announces generation status changes (using `announce` from the status map). Screen-reader users hear "Shot 2 ready" without polling the page themselves.
   - Every icon button has a label, and the whole flow works with the keyboard alone (⌘/Ctrl+Enter submits the brief, Esc closes panels, arrow keys move between shots on the timeline).
-  - Animations respect `prefers-reduced-motion`.
-- **Motion** comes from a small set of tokenised transitions (frame fade-in, panel slide) and is never decorative on critical paths.
+  - Animations respect `prefers-reduced-motion`, and looping indicators hold still.
+  - Arrivals are announced twice. The page's status pill is a polite live region, and the toast region (`useToast`) announces "Your ad is ready" and failures.
+- **Motion** comes from that small set of tokenised transitions. It is never decorative on critical paths.
+- **Ready alerts** (`features/alerts`) turn long waits into signals:
+  - a tab-title prefix;
+  - a favicon dot while the tab is hidden;
+  - a toast that waits for a hidden tab;
+  - an opt-in desktop `Notification`, asked for only on a click.
 
 ## 8. Performance
 

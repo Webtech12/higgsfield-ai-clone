@@ -10,7 +10,8 @@ build order and cut list in `docs/plan.md`.
 
 ## 1. Product
 
-An AI creative director for **ads** ([ADR-024](docs/adr/024-ad-studio-with-consenting-talent.md)).
+**Citrus Talent Studio**: an AI creative director for **ads** ([ADR-024](docs/adr/024-ad-studio-with-consenting-talent.md)),
+built for the talent agency Citrus Talent and branded as theirs ([ADR-028](docs/adr/028-citrus-talent-studio-brand-and-return-loop.md)).
 A brand describes its product and the ad it wants in a structured brief with product photos, and casts
 one talent from a roster of real people who have consented. The app returns 3 ad concepts, each with
 3 shots and a storyboard frame per shot showing the talent and the product. The brand picks a concept,
@@ -53,6 +54,19 @@ FPV) but organises the experience around the brand's intent instead of model sel
   a $10/day global spend kill-switch.
 - **Examples:** finished ads are shown with the briefs that made them, public and read-only. A
   signed-out visitor can watch them straight away.
+- **Pages** ([ADR-028](docs/adr/028-citrus-talent-studio-brand-and-return-loop.md)):
+  - **Create:** a talent wall, then the brief.
+  - **My ads:** everything the viewer made, with "Make another".
+  - **Talent:** the roster, each person with their release on file.
+  - **Examples.**
+  - **The ad's page:** the Board, then the Studio.
+
+  A sticky header links them, a bottom tab bar on phones.
+- **Ready alerts:** when concepts or a finished ad arrive, the brand is told wherever they are:
+  - the tab title;
+  - a favicon dot while the tab is in the background;
+  - an in-page message that waits for them to come back;
+  - an opt-in desktop notification.
 
 **Out of scope (do NOT build):** model marketplace, Cinema Studio clone, node/canvas workflows,
 per-talent model training (Soul ID), talent sign-up or logins, brand video uploads,
@@ -130,15 +144,19 @@ Cross-cutting code that is not a domain module ([ADR-019](docs/adr/019-module-bo
 ```
 src/
 ├─ app/                                  # delivery only: routes, layouts, route handlers
-│  ├─ page.tsx                           # Brief
-│  ├─ p/[projectId]/{page,loading,error}.tsx   # Board / Studio
-│  ├─ projects/page.tsx                  # Gallery
+│  ├─ page.tsx                           # Create: talent wall + brief
+│  ├─ p/[projectId]/{page,loading,error}.tsx   # the ad: Board / Studio, ready alerts
+│  ├─ ads/page.tsx                       # My ads
+│  ├─ talent/page.tsx                    # Talent roster
+│  ├─ demo/                              # Examples (the public demo)
 │  ├─ sign-in/page.tsx
+│  ├─ _components/                       # app shell: header, phone tab bar, footer, providers
 │  └─ api/
 │     ├─ auth/[...all]/route.ts          # Better Auth handler
 │     ├─ v1/…                            # REST API
 │     └─ inngest/route.ts                # workflow endpoint
-├─ features/                             # frontend slices: auth, brief, board, studio, projects, credits
+├─ features/                             # frontend slices: auth, brief, board, studio, alerts, ads,
+│                                        # talent, credits
 ├─ entities/                             # shared frontend slices: project (queries, useProject, view
 │                                        # models, status meta), talent (view models, talent card)
 ├─ shared/                               # ui (design system), lib (apiClient, apiErrors, idempotency), config
