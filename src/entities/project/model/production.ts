@@ -2,10 +2,14 @@ import type { AspectRatio } from "@/contracts/brief";
 import { shotFilename, type ShotView, type WorkspaceView } from "@/contracts/project";
 import { apiUrl } from "@/shared/lib/apiClient";
 
+import { timeAgo } from "./adCard";
 import { ASSET_STATUS_META, type Tone } from "./statusMeta";
 import { CAMERA_MOVE_LABEL, frameState } from "./viewModels";
 
 /** Production view models: the chosen direction becomes a film of playable shots (the Studio). */
+
+/** Kling v3 Pro renders an ad's shots side by side in about this long (ADR-026). */
+export const TYPICAL_RENDER_MINUTES = 8;
 
 export type VideoState =
   | { kind: "waiting" }
@@ -53,9 +57,8 @@ function productionMessage({
   if (total > 0 && ready === total) return "Your ad is ready. Press play to watch it.";
   const tally = `${String(ready)} of ${String(total)} shots ready`;
   if (inFlight > 0) {
-    // Kling v3 Pro renders the shots side by side in about 8 minutes (ADR-026): say so, so a long
-    // wait doesn't read as stuck.
-    return `Rendering your ad (about 8 minutes): ${tally}${failed > 0 ? `, ${String(failed)} failed` : ""}`;
+    // Say how long rendering takes, so a long wait doesn't read as stuck.
+    return `Rendering your ad (about ${String(TYPICAL_RENDER_MINUTES)} minutes): ${tally}${failed > 0 ? `, ${String(failed)} failed` : ""}`;
   }
   // Layout-neutral: the shot list sits beside the player on wide screens and below it on phones.
   const failures =
@@ -89,19 +92,44 @@ export interface Film {
   canManage: boolean;
   shots: FilmShot[];
   progress: ProductionProgress;
+  /** When the earliest shot still rendering was ordered (ISO); null when none is. */
+  renderStartedAt: string | null;
 }
 
 const WAITING_STATUS = { label: "Waiting", tone: "muted" } as const;
 
 export function toFilm(view: WorkspaceView): Film {
   const direction = view.directions.find((d) => d.id === view.selectedDirectionId);
+  const shots = direction?.shots ?? [];
+  const rendering = shots
+    .filter((shot) => videoState(shot).kind === "rendering")
+    .flatMap((shot) => (shot.video ? [shot.video.createdAt] : []));
   return {
     projectId: view.id,
     directionName: direction?.name ?? "",
     aspectRatio: view.aspectRatio,
     canManage: view.isOwner && !view.isDemo,
-    shots: (direction?.shots ?? []).map((shot, index) => toFilmShot(view, shot, index + 1)),
+    shots: shots.map((shot, index) => toFilmShot(view, shot, index + 1)),
     progress: productionProgress(view),
+    // ISO strings in UTC sort as time.
+    renderStartedAt: rendering.sort()[0] ?? null,
+  };
+}
+
+export interface RenderClock {
+  /** "Started 3 min ago" */
+  started: string;
+  /** "About 5 min to go", until the typical time has passed. */
+  remaining: string;
+}
+
+/** How long a render has run and roughly how long is left, so an 8-minute wait never looks stuck. */
+export function renderClock(startedAt: string, now: Date): RenderClock {
+  const minutes = Math.floor((now.getTime() - new Date(startedAt).getTime()) / 60_000);
+  const left = TYPICAL_RENDER_MINUTES - Math.max(0, minutes);
+  return {
+    started: `Started ${timeAgo(startedAt, now).toLowerCase()}`,
+    remaining: left >= 1 ? `About ${String(left)} min to go` : "Taking a little longer than usual",
   };
 }
 

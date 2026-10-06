@@ -112,6 +112,7 @@
   --animate-rise: rise 0.8s var(--ease-out-expo) both;
   --animate-wipe: wipe 1s var(--ease-out-expo) both;
   --animate-toast: toast-in 0.5s var(--ease-out-expo) both;
+  --animate-sweep: sweep 1.8s var(--ease-in-out-expo) infinite;
 
   @keyframes rise {
     from {
@@ -144,6 +145,16 @@
       transform: none;
     }
   }
+
+  /* Work under way: a band of light crossing a track, like a scanner. */
+  @keyframes sweep {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
 }
 
 @layer base {
@@ -173,6 +184,8 @@
   *::after {
     animation-duration: 0.01ms !important;
     animation-delay: 0ms !important;
+    /* Looping work indicators (spinners, sweeps) hold still instead of flickering. */
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

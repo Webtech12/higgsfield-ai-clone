@@ -13,6 +13,7 @@ export const asset = (
   version: 1,
   url,
   error: null,
+  createdAt: "2026-10-06T12:00:00Z",
 });
 
 export const shot = (overrides: Partial<ShotView> = {}): ShotView => ({

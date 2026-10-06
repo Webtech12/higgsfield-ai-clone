@@ -14,8 +14,8 @@ export function PlayerControls({ film, player }: { film: Film; player: Player })
   const lastIndex = film.shots.length - 1;
 
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2">
-      <Button onClick={player.toggle} disabled={!player.canPlay} className="min-w-32">
+    <div className="mt-5 flex flex-wrap items-center gap-2">
+      <Button size="lg" onClick={player.toggle} disabled={!player.canPlay} className="min-w-36">
         {state.isPlaying ? (
           <>
             <Pause aria-hidden /> Pause

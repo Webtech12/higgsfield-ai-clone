@@ -59,6 +59,8 @@ export const AssetView = z.object({
   version: z.number().int(),
   url: z.string().nullable(),
   error: z.string().nullable(),
+  /** When it was ordered (ISO), so a long render can say how long it has run. */
+  createdAt: z.string(),
 });
 export type AssetView = z.infer<typeof AssetView>;
 

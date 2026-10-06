@@ -6,12 +6,14 @@ import type { Film } from "@/entities/project";
 import { useRefreshMe } from "@/entities/viewer";
 
 import { usePlayer } from "../hooks/usePlayer";
+import { RenderProgress } from "./RenderProgress";
 import { SequencePlayer } from "./SequencePlayer";
 import { ShotTimeline } from "./ShotTimeline";
 
 /**
- * The Studio: the chosen direction as a film. The player and its shot list sit side by side on wide
- * screens, so Play, every shot's status and its actions are all in view without scrolling.
+ * The Studio: the chosen concept as a finished ad. While it renders, a progress panel leads; the
+ * player and its shot list sit side by side on wide screens, so Play, every shot's status and its
+ * actions are all in view without scrolling.
  */
 export function Studio({ film }: { film: Film }) {
   const player = usePlayer(film.shots);
@@ -24,14 +26,20 @@ export function Studio({ film }: { film: Film }) {
   }, [failed, refreshMe]);
 
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
-      <section aria-label="Player" className="min-w-0">
-        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-          Concept · {film.directionName}
-        </p>
-        <SequencePlayer film={film} player={player} />
-      </section>
-      <ShotTimeline film={film} currentIndex={player.state.index} onSelect={player.select} />
+    <div className="flex flex-col gap-10">
+      {film.progress.inFlight > 0 ? <RenderProgress film={film} /> : null}
+      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_22rem] xl:gap-14">
+        <section aria-labelledby="player-heading" className="min-w-0">
+          <h2
+            id="player-heading"
+            className="mb-4 text-xs font-semibold tracking-[0.18em] text-primary uppercase"
+          >
+            Concept · {film.directionName}
+          </h2>
+          <SequencePlayer film={film} player={player} />
+        </section>
+        <ShotTimeline film={film} currentIndex={player.state.index} onSelect={player.select} />
+      </div>
     </div>
   );
 }

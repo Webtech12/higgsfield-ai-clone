@@ -84,6 +84,7 @@ const toAssetView = (row: AssetRow): AssetView => ({
   version: row.version,
   url: row.url,
   error: row.error,
+  createdAt: row.createdAt.toISOString(),
 });
 
 /** The asset to display (current, else latest) and any newer attempt that hasn't succeeded. */

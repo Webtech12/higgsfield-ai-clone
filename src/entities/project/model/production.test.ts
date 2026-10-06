@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { asset, shot, view } from "./fixtures";
-import { produceReadiness, productionProgress, toFilm, videoState } from "./production";
+import {
+  produceReadiness,
+  productionProgress,
+  renderClock,
+  toFilm,
+  videoState,
+} from "./production";
 
 const frame = asset("succeeded", "/frame.svg");
 const video = (status: Parameters<typeof asset>[0], url: string | null = null) =>
@@ -101,6 +107,46 @@ describe("toFilm", () => {
   it("lets only the owner manage a film, never on the demo", () => {
     expect(toFilm(view("ready", [], { isOwner: false })).canManage).toBe(false);
     expect(toFilm(view("ready", [], { isDemo: true })).canManage).toBe(false);
+  });
+
+  it("starts the render clock at the earliest shot still rendering", () => {
+    const ordered = (createdAt: string) => ({ ...video("running"), createdAt });
+    const film = toFilm(
+      chosen("producing", [
+        shot({
+          frame,
+          video: { ...video("succeeded", "/1.webm"), createdAt: "2026-10-06T11:00:00Z" },
+        }),
+        shot({ frame, video: ordered("2026-10-06T12:05:00Z") }),
+        shot({ frame, video: ordered("2026-10-06T12:01:00Z") }),
+      ]),
+    );
+
+    expect(film.renderStartedAt).toBe("2026-10-06T12:01:00Z");
+    expect(
+      toFilm(chosen("ready", [shot({ frame, video: video("succeeded", "/1.webm") })]))
+        .renderStartedAt,
+    ).toBeNull();
+  });
+});
+
+describe("renderClock", () => {
+  const startedAt = "2026-10-06T12:00:00Z";
+  const at = (minutes: number) => new Date(Date.parse(startedAt) + minutes * 60_000);
+
+  it("counts up from the order and down from the typical render time", () => {
+    expect(renderClock(startedAt, at(0))).toEqual({
+      started: "Started just now",
+      remaining: "About 8 min to go",
+    });
+    expect(renderClock(startedAt, at(3))).toEqual({
+      started: "Started 3 min ago",
+      remaining: "About 5 min to go",
+    });
+  });
+
+  it("owns up when a render runs long instead of counting below zero", () => {
+    expect(renderClock(startedAt, at(11)).remaining).toBe("Taking a little longer than usual");
   });
 });
 

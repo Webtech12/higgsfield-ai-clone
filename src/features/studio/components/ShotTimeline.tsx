@@ -35,7 +35,10 @@ export function ShotTimeline({
 
   return (
     <section aria-labelledby="shots-heading">
-      <h2 id="shots-heading" className="mb-3 font-mono text-xs text-muted-foreground">
+      <h2
+        id="shots-heading"
+        className="mb-4 text-xs font-semibold tracking-[0.18em] text-muted-foreground uppercase"
+      >
         Shots
       </h2>
       <ol className="space-y-2">
@@ -43,8 +46,10 @@ export function ShotTimeline({
           <li
             key={shot.id}
             className={cn(
-              "flex gap-3 rounded-lg border p-2 transition-colors",
-              index === currentIndex ? "border-primary/40 bg-card" : "border-transparent",
+              "flex gap-3.5 rounded-2xl border p-2.5 transition-colors duration-200 ease-out-quart",
+              index === currentIndex
+                ? "border-primary/50 bg-card"
+                : "border-transparent hover:bg-card/60",
             )}
           >
             <button
@@ -55,7 +60,7 @@ export function ShotTimeline({
               aria-current={index === currentIndex ? "true" : undefined}
               aria-label={`Show shot ${String(shot.number)} in the player`}
               className={cn(
-                "relative shrink-0 self-start overflow-hidden rounded-md border border-border bg-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
+                "relative shrink-0 self-start overflow-hidden rounded-lg border border-border bg-muted outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
                 ASPECT_CLASS[film.aspectRatio],
                 THUMB_WIDTH[film.aspectRatio],
               )}
@@ -86,9 +91,9 @@ function ShotDetails({
   return (
     <div className="min-w-0 flex-1">
       <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 truncate text-sm font-medium">
-          <span className="mr-1.5 font-mono text-xs text-muted-foreground" aria-hidden>
-            {shot.number}
+        <h3 className="min-w-0 truncate text-sm font-semibold">
+          <span className="mr-1.5 font-display text-xs text-primary tabular-nums" aria-hidden>
+            {String(shot.number).padStart(2, "0")}
           </span>
           <span className="sr-only">Shot {shot.number}: </span>
           {shot.title}

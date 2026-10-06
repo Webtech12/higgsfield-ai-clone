@@ -77,7 +77,7 @@ export function SequencePlayer({ film, player }: { film: Film; player: Player })
     <div className={cn("mx-auto w-full", WIDTH_CLASS[film.aspectRatio])}>
       <div
         className={cn(
-          "relative w-full overflow-hidden rounded-xl border border-border bg-black",
+          "relative w-full overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 shadow-black/60 ring-white/10",
           ASPECT_CLASS[film.aspectRatio],
         )}
       >
@@ -98,7 +98,7 @@ export function SequencePlayer({ film, player }: { film: Film; player: Player })
               aria-hidden={index !== state.index}
               data-current={index === state.index ? "true" : undefined}
               className={cn(
-                "absolute inset-0 size-full object-contain transition-opacity duration-300",
+                "absolute inset-0 size-full object-contain transition-opacity duration-300 ease-out-quart",
                 index === state.index ? "opacity-100" : "opacity-0",
               )}
               onEnded={player.clipEnded}
@@ -109,13 +109,14 @@ export function SequencePlayer({ film, player }: { film: Film; player: Player })
         {current && current.video.kind !== "ready" ? <PendingShot shot={current} /> : null}
       </div>
 
-      <div className="mt-3 flex gap-1" aria-hidden>
+      <div className="mt-4 flex gap-1" aria-hidden>
         {film.shots.map((shot, index) => (
           <div
             key={shot.id}
-            className="h-1 basis-0 overflow-hidden rounded-full bg-muted"
+            className="h-1 basis-0 overflow-hidden rounded-full bg-white/10"
             style={{ flexGrow: shot.durationS }}
           >
+            {/* Linear on purpose: it tracks playback time, which runs at a constant rate. */}
             <div
               className="h-full bg-primary transition-[width] duration-300 ease-linear"
               style={{ width: `${String(fill(index) * 100)}%` }}
@@ -129,25 +130,43 @@ export function SequencePlayer({ film, player }: { film: Film; player: Player })
   );
 }
 
-/** A shot without a playable video yet: its storyboard frame, dimmed, with what's happening. */
+/**
+ * A shot without a playable video yet: its storyboard frame, in grayscale, with what's happening.
+ * The frame is the video's first frame, so the brand already sees how the shot opens.
+ */
 function PendingShot({ shot }: { shot: FilmShot }) {
   const isFailed = shot.video.kind === "failed";
+  const number = String(shot.number);
   return (
     <div className="absolute inset-0">
       {shot.posterUrl ? (
         // Plain <img>: a storyboard still from our own origin or bucket, shown behind a status.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={shot.posterUrl} alt="" className="size-full object-contain opacity-40" />
+        <img
+          src={shot.posterUrl}
+          alt=""
+          className="size-full object-contain opacity-35 grayscale"
+        />
       ) : null}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-sm">
+      {isFailed ? null : (
+        <span aria-hidden className="absolute inset-x-0 bottom-0 h-1 overflow-hidden bg-white/5">
+          <span className="absolute inset-0 animate-sweep bg-linear-to-r from-transparent via-neon/80 to-transparent" />
+        </span>
+      )}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/65 px-4 py-2 text-sm font-medium backdrop-blur-md">
+          {isFailed ? (
+            <AlertTriangle className="size-4 text-destructive" aria-hidden />
+          ) : (
+            <LoaderCircle className="size-4 animate-spin text-primary" aria-hidden />
+          )}
+          {isFailed ? `Shot ${number} didn't render` : `Rendering shot ${number}…`}
+        </span>
         {isFailed ? (
-          <AlertTriangle className="size-5 text-destructive" aria-hidden />
-        ) : (
-          <LoaderCircle className="size-5 animate-spin text-muted-foreground" aria-hidden />
-        )}
-        {isFailed
-          ? `Shot ${String(shot.number)} didn't render. Retry it from the shot list.`
-          : `Rendering shot ${String(shot.number)}…`}
+          <p className="max-w-60 text-xs leading-relaxed text-white/70">
+            Its credits were refunded. Retry it from the shot list.
+          </p>
+        ) : null}
       </div>
     </div>
   );

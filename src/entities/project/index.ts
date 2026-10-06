@@ -11,12 +11,15 @@ export { useProject } from "./hooks/useProject";
 export {
   produceReadiness,
   productionProgress,
+  renderClock,
   toFilm,
+  TYPICAL_RENDER_MINUTES,
   videoState,
   type Film,
   type FilmShot,
   type ProduceReadiness,
   type ProductionProgress,
+  type RenderClock,
   type VideoState,
 } from "./model/production";
 export { ASSET_STATUS_META, type StatusMeta, type Tone } from "./model/statusMeta";

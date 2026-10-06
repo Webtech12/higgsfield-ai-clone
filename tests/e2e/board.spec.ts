@@ -40,6 +40,8 @@ test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", a
   await expect(page).toHaveURL(/\/p\/prj_/, { timeout: 60_000 });
   await expect(page.getByText("Starring Ava Moreno")).toBeVisible();
   await expect(page.getByText(/Storyboards ready/)).toBeVisible({ timeout: 120_000 });
+  // The tab says so too, for a brand who went to another tab while the concepts were written.
+  await expect(page).toHaveTitle(/^✓ Concepts ready · /);
   // Each frame is the button that enlarges it, so count the frames by their pictures.
   await expect(page.locator('img[alt$="in frame"]')).toHaveCount(9);
   await expect(page.getByText("End card")).toHaveCount(3);
@@ -63,12 +65,15 @@ test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", a
   // Produce: the price is on the button, and the header balance drops when it's reserved.
   await expect(page.getByText("40 credits", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Produce 3 shots · 30 credits" }).click();
-  await expect(page.getByText(/Rendering your ad/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Rendering your ad" })).toBeVisible({
+    timeout: 30_000,
+  });
   await expect(page.getByText("10 credits", { exact: true })).toBeVisible();
 
   await expect(page.getByText("Your ad is ready. Press play to watch it.")).toBeVisible({
     timeout: 120_000,
   });
+  await expect(page).toHaveTitle(/^✓ Your ad is ready · /);
   await expect(page.getByRole("link", { name: /^Download shot/ })).toHaveCount(3);
 
   // Downloads stream through our route under a friendly name, not the storage key.
