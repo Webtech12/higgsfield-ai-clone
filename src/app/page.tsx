@@ -23,8 +23,8 @@ export default async function BriefPage() {
           Real talent. Your product. <em className="text-muted-foreground">A finished ad.</em>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-pretty text-muted-foreground">
-          Brief it in a few lines and cast a real creator. Director proposes three concepts with
-          storyboards, then turns the one you choose into an ad ready to post.
+          Brief it in a few lines and cast a real creator. You get three concepts with storyboards,
+          and the one you choose becomes an ad ready to post.
         </p>
         <p className="mt-4 text-sm text-muted-foreground">
           Want to see the result first?{" "}
@@ -32,7 +32,7 @@ export default async function BriefPage() {
             href="/demo"
             className="text-foreground underline underline-offset-4 hover:text-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
-            Watch something made with Director
+            Watch an example
           </Link>
         </p>
       </section>

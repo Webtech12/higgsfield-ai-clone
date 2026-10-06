@@ -122,16 +122,16 @@ export const WorkspaceView = z.object({
 export type WorkspaceView = z.infer<typeof WorkspaceView>;
 
 /**
- * "the-keeper-shot-2.mp4": the film's title, the shot number and the clip's real extension. Shared,
+ * "luma-serum-shot-2.mp4": the ad's title, the shot number and the clip's real extension. Shared,
  * so a download link's suggested name and the name the server sends always agree.
  */
-export function shotFilename(filmTitle: string, shotNumber: number, url: string): string {
+export function shotFilename(adTitle: string, shotNumber: number, url: string): string {
   const slug =
-    filmTitle
+    adTitle
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .slice(0, 48)
-      .replace(/^-+|-+$/g, "") || "film";
+      .replace(/^-+|-+$/g, "") || "ad";
   const extension = /\.(mp4|webm|mov)(?=$|[?#])/i.exec(url)?.[1]?.toLowerCase() ?? "mp4";
   return `${slug}-shot-${String(shotNumber)}.${extension}`;
 }

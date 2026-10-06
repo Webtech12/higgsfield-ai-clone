@@ -30,7 +30,7 @@ export function Workspace({ initial }: { initial: WorkspaceSnapshot }) {
         {view.isDemo ? (
           <p className="mb-4 flex flex-wrap items-center gap-3 text-sm">
             <span className="rounded-full border border-primary/40 px-3 py-1 text-xs text-primary">
-              Demo film
+              Example
             </span>
             <Link
               href="/"

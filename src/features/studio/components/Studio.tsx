@@ -26,8 +26,8 @@ export function Studio({ film }: { film: Film }) {
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-8">
       <section aria-label="Player" className="min-w-0">
-        <p className="mb-3 font-mono text-xs text-muted-foreground">
-          Direction · {film.directionName}
+        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+          Concept · {film.directionName}
         </p>
         <SequencePlayer film={film} player={player} />
       </section>

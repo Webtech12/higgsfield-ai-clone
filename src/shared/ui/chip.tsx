@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 
 import { cn } from "@/shared/lib/cn";
 
-/** A toggle chip: a button that reports its state with aria-pressed. */
+/** A toggle chip: a button that reports its state with aria-pressed. 44 px tall on touch screens. */
 export function Chip({
   isOn,
   className,
@@ -13,10 +13,10 @@ export function Chip({
       type="button"
       aria-pressed={isOn}
       className={cn(
-        "rounded-full border px-3 py-1 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40",
+        "inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-medium transition-[background-color,border-color,color,transform] duration-200 ease-out-quart focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-35 pointer-coarse:h-11",
         isOn
-          ? "border-primary/60 bg-primary/10 text-foreground"
-          : "border-input text-muted-foreground hover:text-foreground",
+          ? "border-primary bg-primary/12 text-foreground"
+          : "border-input text-muted-foreground hover:border-foreground/30 hover:text-foreground",
         className,
       )}
       {...props}

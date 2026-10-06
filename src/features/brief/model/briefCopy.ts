@@ -44,7 +44,7 @@ export const FIELD_COPY = {
     label: "Scene direction",
     placeholder:
       "A bright bathroom on a weekday morning, soft window light. She's halfway through her routine and in a hurry.",
-    hint: "Where it happens, the light and what the talent does. The Director fills in the rest.",
+    hint: "Where it happens, the light and what the talent does. We fill in the rest.",
     error: "Keep the scene direction under 600 characters.",
   },
 } satisfies Record<AdTextField, FieldCopy>;

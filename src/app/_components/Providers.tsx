@@ -3,7 +3,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 
-/** Client-side server-state cache (ADR-014). One QueryClient per browser session. */
+import { ToastProvider } from "@/shared/ui";
+
+/** Client-side server-state cache (ADR-014), and the page's toasts. One of each per browser session. */
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(
     () =>
@@ -14,5 +16,9 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }),
   );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={client}>
+      <ToastProvider>{children}</ToastProvider>
+    </QueryClientProvider>
+  );
 }

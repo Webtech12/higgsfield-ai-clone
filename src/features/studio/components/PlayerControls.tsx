@@ -26,7 +26,7 @@ export function PlayerControls({ film, player }: { film: Film; player: Player })
           </>
         ) : (
           <>
-            <Play aria-hidden /> Play film
+            <Play aria-hidden /> Play ad
           </>
         )}
       </Button>

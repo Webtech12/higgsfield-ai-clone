@@ -61,10 +61,10 @@ test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", a
   // Produce: the price is on the button, and the header balance drops when it's reserved.
   await expect(page.getByText("40 credits", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Produce 3 shots · 30 credits" }).click();
-  await expect(page.getByText(/Rendering your film/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Rendering your ad/)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("10 credits", { exact: true })).toBeVisible();
 
-  await expect(page.getByText("Your film is ready. Press play to watch it.")).toBeVisible({
+  await expect(page.getByText("Your ad is ready. Press play to watch it.")).toBeVisible({
     timeout: 120_000,
   });
   await expect(page.getByRole("link", { name: /^Download shot/ })).toHaveCount(3);
@@ -78,7 +78,7 @@ test("ad brief to concepts: polish, cast, storyboard, edit, produce and play", a
   );
 
   // Playback runs the shots back to back.
-  await page.getByRole("button", { name: "Play film" }).click();
+  await page.getByRole("button", { name: "Play ad" }).click();
   await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
   await expect
     .poll(() =>

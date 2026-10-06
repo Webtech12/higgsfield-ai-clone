@@ -90,9 +90,9 @@ export function boardProgress(view: WorkspaceView): BoardProgress {
   // A failed frame shows its own state on its card, so it doesn't keep the page "drawing".
   const message =
     view.status === "planning"
-      ? "The Director is writing three concepts…"
+      ? "Writing three concepts…"
       : view.status === "failed"
-        ? "The Director couldn't finish this plan."
+        ? "We couldn't finish this plan."
         : framesReady + framesFailed < framesTotal
           ? `Drawing storyboards: ${String(framesReady)} of ${String(framesTotal)} frames ready`
           : view.selectedDirectionId

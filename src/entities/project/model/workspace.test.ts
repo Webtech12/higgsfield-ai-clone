@@ -40,14 +40,14 @@ describe("adHeader", () => {
 
 describe("progressMessage", () => {
   it("narrates the Board while planning and storyboarding", () => {
-    expect(progressMessage(view("planning", []))).toBe("The Director is writing three concepts…");
+    expect(progressMessage(view("planning", []))).toBe("Writing three concepts…");
   });
 
   it("doesn't call the public demo 'your film'", () => {
     const demo = view("ready", [], { selectedDirectionId: "dir_1", isDemo: true, isOwner: false });
 
     expect(progressMessage(demo)).toBe(
-      "Made with Director from the brief above. Press play to watch it.",
+      "Made with Citrus Talent Studio from the brief above. Press play to watch it.",
     );
   });
 
@@ -56,6 +56,6 @@ describe("progressMessage", () => {
 
     expect(
       progressMessage(view("producing", [rendering, rendering], { selectedDirectionId: "dir_1" })),
-    ).toBe("Rendering your film (about 8 minutes): 0 of 2 shots ready");
+    ).toBe("Rendering your ad (about 8 minutes): 0 of 2 shots ready");
   });
 });

@@ -2,41 +2,62 @@
 @import "tw-animate-css";
 
 /*
- * Director's design tokens (docs/frontend.md §7). The app is dark by design: a warm near-black
- * "screening room" with a tungsten-amber accent. Components read only these tokens, never raw
- * colours, so the theme has one home.
+ * Citrus Talent Studio's design tokens (ADR-028, docs/frontend.md §7). Dark, like Citrus Talent's own
+ * homepage: near-black (never pure black), grayscale talent photography, and one electric accent,
+ * citrus green, reserved for the primary action, focus and "ready" moments. Components read only
+ * these tokens, never raw colours, so the theme has one home.
  */
 :root {
   color-scheme: dark;
 
   --radius: 0.75rem;
 
-  --background: oklch(0.145 0.004 60);
-  --foreground: oklch(0.95 0.006 80);
+  --background: #0a0a0a;
+  --foreground: #fafaf9;
 
-  --card: oklch(0.18 0.005 60);
+  --card: #121212;
   --card-foreground: var(--foreground);
-  --popover: oklch(0.2 0.005 60);
+  --popover: #161616;
   --popover-foreground: var(--foreground);
 
-  /* Tungsten amber: the only saturated colour, reserved for the primary action and focus. */
-  --primary: oklch(0.8 0.14 70);
-  --primary-foreground: oklch(0.2 0.03 60);
+  /* Citrus Talent's green. Text on it is near-black: their white-on-green fails contrast. */
+  --primary: #96ca4a;
+  --primary-foreground: #0a0a0a;
+  /* Their neon lime: selection and "ready" details only, never large areas. */
+  --neon: #d8ff36;
 
-  --secondary: oklch(0.24 0.006 60);
+  --secondary: #1b1b1b;
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.22 0.005 60);
-  --muted-foreground: oklch(0.7 0.012 70);
-  --accent: oklch(0.26 0.008 60);
+  --muted: #191919;
+  --muted-foreground: #a3a3a3;
+  --accent: #222222;
   --accent-foreground: var(--foreground);
 
-  --destructive: oklch(0.66 0.19 25);
-  --success: oklch(0.76 0.13 150);
-  --info: oklch(0.74 0.09 240);
+  --destructive: #f2555a;
+  --success: #96ca4a;
+  --info: #e5e5e5;
 
-  --border: oklch(1 0 0 / 9%);
-  --input: oklch(1 0 0 / 13%);
-  --ring: oklch(0.8 0.14 70 / 55%);
+  --border: rgb(255 255 255 / 9%);
+  --input: rgb(255 255 255 / 14%);
+  --ring: rgb(150 202 74 / 70%);
+}
+
+/*
+ * A light chapter, like the white bands on Citrus Talent's site: the same components, re-coloured
+ * by scope. Used sparingly, for marketing sections only.
+ */
+.surface-light {
+  color-scheme: light;
+  --background: #fafaf9;
+  --foreground: #0a0a0a;
+  --card: #ffffff;
+  --muted: #efefec;
+  --muted-foreground: #525252;
+  --accent: #e9e9e6;
+  --border: rgb(0 0 0 / 10%);
+  --input: rgb(0 0 0 / 16%);
+  background-color: var(--background);
+  color: var(--foreground);
 }
 
 @theme inline {
@@ -48,6 +69,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-neon: var(--neon);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -65,10 +87,58 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
 
+  /* Epilogue is Citrus Talent's own typeface; Geist carries the dense interface text. */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-instrument-serif);
+  --font-display: var(--font-epilogue);
+}
+
+/*
+ * Motion: custom curves only (no linear or default ease), and every movement is transform or
+ * opacity, so it stays at 60 fps. Reduced-motion users get none of it (below).
+ */
+@theme {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-expo: cubic-bezier(0.87, 0, 0.13, 1);
+
+  --animate-rise: rise 0.8s var(--ease-out-expo) both;
+  --animate-wipe: wipe 1s var(--ease-out-expo) both;
+  --animate-toast: toast-in 0.5s var(--ease-out-expo) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* A frame arriving: revealed top to bottom, like a print coming out of the developer. */
+  @keyframes wipe {
+    from {
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 @layer base {
@@ -79,6 +149,17 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  ::selection {
+    background-color: var(--neon);
+    color: #0a0a0a;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -86,6 +167,7 @@
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
   }
 }

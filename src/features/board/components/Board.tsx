@@ -38,8 +38,8 @@ function PlanFailed() {
     <div className="flex max-w-xl flex-col items-start gap-4 rounded-xl border border-border p-6">
       <AlertTriangle className="size-6 text-destructive" aria-hidden />
       <p>
-        The Director couldn&apos;t turn this brief into concepts. Try rewording it, or give it a
-        little more detail.
+        We couldn&apos;t turn this brief into concepts. Try rewording it, or give it a little more
+        detail.
       </p>
       <Button asChild variant="outline">
         <Link href="/">Write a new brief</Link>

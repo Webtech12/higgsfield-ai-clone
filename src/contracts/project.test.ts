@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { shotFilename } from "./project";
 
 describe("shotFilename", () => {
-  it("slugs the film's title and keeps the clip's real extension", () => {
+  it("slugs the ad's title and keeps the clip's real extension", () => {
     expect(shotFilename("Salt & Static: Part II", 3, "https://cdn/x/clip.MP4?sig=1")).toBe(
       "salt-static-part-ii-shot-3.mp4",
     );
@@ -13,6 +13,6 @@ describe("shotFilename", () => {
   });
 
   it("falls back to a plain name and mp4 when there's nothing to go on", () => {
-    expect(shotFilename("!!!", 1, "/clip")).toBe("film-shot-1.mp4");
+    expect(shotFilename("!!!", 1, "/clip")).toBe("ad-shot-1.mp4");
   });
 });

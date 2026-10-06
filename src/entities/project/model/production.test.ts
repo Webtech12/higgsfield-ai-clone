@@ -41,7 +41,7 @@ describe("productionProgress", () => {
       failed: 0,
       inFlight: 2,
       total: 3,
-      message: "Rendering your film (about 8 minutes): 1 of 3 shots ready",
+      message: "Rendering your ad (about 8 minutes): 1 of 3 shots ready",
     });
   });
 
@@ -49,7 +49,7 @@ describe("productionProgress", () => {
     const shots = [shot({ frame, video: video("succeeded", "/1.webm") })];
 
     expect(productionProgress(chosen("ready", shots)).message).toBe(
-      "Your film is ready. Press play to watch it.",
+      "Your ad is ready. Press play to watch it.",
     );
   });
 
