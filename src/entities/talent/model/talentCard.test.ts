@@ -30,4 +30,8 @@ describe("toTalentCard", () => {
   it("prints the release date the same way on the server and in the browser", () => {
     expect(toTalentCard(talent).consentLine).toBe("Release signed 4 Oct 2026");
   });
+
+  it("links to a new brief with this talent cast", () => {
+    expect(toTalentCard(talent).castHref).toBe("/?talent=tal_1#brief");
+  });
 });

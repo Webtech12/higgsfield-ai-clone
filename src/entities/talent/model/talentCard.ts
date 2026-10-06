@@ -13,6 +13,8 @@ export interface TalentCardModel {
   /** "Release signed 4 Oct 2026" */
   consentLine: string;
   consentScope: string;
+  /** Create, with this talent already cast, scrolled to the brief. */
+  castHref: string;
 }
 
 /** A fixed locale and time zone, so the server and the browser print the same date. */
@@ -35,5 +37,6 @@ export function toTalentCard(talent: TalentView): TalentCardModel {
     photos: talent.photos,
     consentLine: `Release signed ${SIGNED_ON.format(new Date(`${talent.consent.signedOn}T00:00:00Z`))}`,
     consentScope: talent.consent.scope,
+    castHref: `/?talent=${encodeURIComponent(talent.id)}#brief`,
   };
 }
