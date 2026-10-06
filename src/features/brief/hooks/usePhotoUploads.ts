@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { REFERENCE_LIMITS, type AdReferenceInput, type ReferenceRole } from "@/contracts/ad";
+import type { BriefDraft } from "@/contracts/ads";
 import { UPLOAD_CONTENT_TYPES, UploadResponse } from "@/contracts/upload";
 import { ApiError, apiUpload } from "@/shared/lib/apiClient";
 import { errorMessage } from "@/shared/lib/apiErrors";
@@ -72,12 +73,27 @@ function usePreviewUrls() {
   };
 }
 
+/** A photo already uploaded for an earlier ad, reused by "Make another" (ADR-028). */
+export type StartPhoto = BriefDraft["photos"][number];
+
+const startItem = (photo: StartPhoto, index: number): PhotoItem => ({
+  key: `start-${String(index)}`,
+  role: photo.role,
+  previewUrl: photo.url,
+  status: "ready",
+  uploadId: photo.uploadId,
+  error: null,
+});
+
 /**
  * Brand photos for a brief: each one is shrunk in the browser, uploaded at once and tracked here, so
- * the brief only ever submits photos that finished uploading (ADR-024).
+ * the brief only ever submits photos that finished uploading (ADR-024). A brief started from an
+ * earlier ad begins with that ad's photos, already uploaded.
  */
-export function usePhotoUploads(options: { onUploaded?: () => void } = {}) {
-  const [items, setItems] = useState<PhotoItem[]>([]);
+export function usePhotoUploads(
+  options: { onUploaded?: () => void; initial?: readonly StartPhoto[] } = {},
+) {
+  const [items, setItems] = useState<PhotoItem[]>(() => (options.initial ?? []).map(startItem));
   const counter = useRef(0);
   const previews = usePreviewUrls();
 

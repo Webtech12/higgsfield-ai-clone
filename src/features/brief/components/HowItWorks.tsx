@@ -1,6 +1,6 @@
 const STEPS = [
   {
-    title: "Brief it like a pro",
+    title: "Brief it",
     body: "Pick a proven format, add your product photos, and let Polish with AI sharpen the copy.",
   },
   {
@@ -12,29 +12,40 @@ const STEPS = [
     body: "Each has its own hook, look and storyboard, with your talent and your product in every frame.",
   },
   {
-    title: "Finish and refine",
-    body: "The chosen concept becomes a finished ad with music and an end card. Refine it, then download.",
+    title: "Finish the ad",
+    body: "The concept you choose becomes lifelike video, shot by shot, ready to download and post.",
   },
 ] as const;
 
+/**
+ * How it works, as a white band like the ones on Citrus Talent's site: a change of light that marks
+ * a new chapter of the page (ADR-028).
+ */
 export function HowItWorks() {
   return (
-    <section aria-labelledby="how-it-works" className="mt-24">
-      <h2
-        id="how-it-works"
-        className="text-sm font-medium tracking-widest text-muted-foreground uppercase"
-      >
-        How it works
-      </h2>
-      <ol className="mt-6 grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
-        {STEPS.map((step, index) => (
-          <li key={step.title} className="bg-background p-5">
-            <span className="font-display text-3xl text-primary">{index + 1}</span>
-            <h3 className="mt-3 font-medium">{step.title}</h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
-          </li>
-        ))}
-      </ol>
+    <section aria-labelledby="how-it-works" className="surface-light">
+      <div className="mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
+        <p className="text-xs font-semibold tracking-[0.22em] text-primary-ink uppercase">
+          How it works
+        </p>
+        <h2
+          id="how-it-works"
+          className="mt-4 max-w-3xl font-display text-4xl leading-[0.95] font-semibold tracking-[-0.035em] sm:text-6xl"
+        >
+          From brief to finished ad in four moves.
+        </h2>
+        <ol className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          {STEPS.map((step, index) => (
+            <li key={step.title} className="border-t border-border pt-6">
+              <span className="font-display text-5xl font-semibold tracking-[-0.04em] text-primary-ink tabular-nums">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-4 text-lg font-semibold">{step.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
     </section>
   );
 }

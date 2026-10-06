@@ -42,6 +42,7 @@ export function BriefTextField({
       error={hasError ? copy.error : undefined}
       optional={optional}
       count={{ value: value.length, max }}
+      quiet
     >
       {multiline ? <Textarea rows={3} {...control} /> : <Input {...control} />}
     </Field>

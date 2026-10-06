@@ -1,47 +1,82 @@
-import Link from "next/link";
+import { headers } from "next/headers";
 
-import { toTalentCard } from "@/entities/talent";
-import { AdBriefComposer, HowItWorks } from "@/features/brief";
+import { toAdCard } from "@/entities/project";
+import { toTalentCard, type TalentCardModel } from "@/entities/talent";
+import { RecentAds } from "@/features/ads";
+import { AdBriefComposer, HowItWorks, type BriefStart } from "@/features/brief";
 import { getModules } from "@/server/container";
-import { listTalent } from "@/server/queries";
+import { getCurrentUser } from "@/server/modules/identity";
+import { getBriefDraft, listTalent, listViewerAds } from "@/server/queries";
+import type { Reader } from "@/server/platform/db";
 
-// The roster is read per request: talent can join or leave without a deploy (ADR-024).
+// The roster and the viewer's ads are read per request: both change without a deploy.
 export const dynamic = "force-dynamic";
 
-export default async function BriefPage() {
-  const roster = (await listTalent(getModules().db)).map(toTalentCard);
+/** How many recent ads a returning visitor sees above the brief. */
+const RECENT_ADS = 4;
+
+/**
+ * Create (ADR-028). A first visit opens on the talent wall; a returning visitor sees their recent ads
+ * first. `?talent=<id>` arrives from the Talent page with someone already cast, and `?from=<adId>`
+ * from "Make another" with an earlier ad's brief and photos.
+ */
+export default async function CreatePage({ searchParams }: PageProps<"/">) {
+  const params = await searchParams;
+  const { db } = getModules();
+  const viewer = await getCurrentUser(await headers());
+  const roster = (await listTalent(db)).map(toTalentCard);
+  const recent = viewer ? await listViewerAds(db, viewer.id, { limit: RECENT_ADS }) : [];
+  const start = await briefStart(db, viewer?.id ?? null, params, roster);
+  const now = new Date();
+  const isReturning = recent.length > 0;
+
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-16 pb-24 sm:px-6 sm:pt-24">
-      <section aria-labelledby="brief-heading" className="mx-auto max-w-3xl text-center">
-        <p className="text-sm font-medium tracking-widest text-primary uppercase">
-          Your AI creative director for ads
-        </p>
-        <h1
-          id="brief-heading"
-          className="mt-4 font-display text-5xl leading-[1.05] tracking-tight text-balance sm:text-7xl"
-        >
-          Real talent. Your product. <em className="text-muted-foreground">A finished ad.</em>
-        </h1>
-        <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-pretty text-muted-foreground">
-          Brief it in a few lines and cast a real creator. You get three concepts with storyboards,
-          and the one you choose becomes an ad ready to post.
-        </p>
-        <p className="mt-4 text-sm text-muted-foreground">
-          Want to see the result first?{" "}
-          <Link
-            href="/demo"
-            className="text-foreground underline underline-offset-4 hover:text-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            Watch an example
-          </Link>
-        </p>
-      </section>
-
-      <div className="mt-12">
-        <AdBriefComposer roster={roster} />
-      </div>
-
-      <HowItWorks />
+    <main className="flex w-full flex-1 flex-col pb-36 lg:pb-24">
+      <AdBriefComposer
+        roster={roster}
+        start={start}
+        variant={isReturning ? "returning" : "first"}
+        aboveBrief={
+          isReturning ? <RecentAds ads={recent.map((ad) => toAdCard(ad, now))} /> : undefined
+        }
+      />
+      {isReturning ? null : (
+        <div className="mt-24">
+          <HowItWorks />
+        </div>
+      )}
     </main>
   );
+}
+
+const single = (value: string | string[] | undefined): string | null =>
+  typeof value === "string" && value.length > 0 ? value : null;
+
+/** Where the brief starts: an earlier ad (owner only), a talent from the roster, or blank. */
+async function briefStart(
+  db: Reader,
+  viewerId: string | null,
+  params: Record<string, string | string[] | undefined>,
+  roster: TalentCardModel[],
+): Promise<BriefStart | null> {
+  // Only someone still on the roster can be cast: a talent whose consent ended drops out.
+  const castable = (talentId: string | null) =>
+    talentId && roster.some((talent) => talent.id === talentId) ? talentId : null;
+
+  const from = single(params.from);
+  if (from && viewerId) {
+    const draft = await getBriefDraft(db, viewerId, from);
+    if (draft) {
+      return {
+        values: {
+          ...draft.fields,
+          talentId: castable(draft.talentId),
+          aspectRatio: draft.aspectRatio,
+        },
+        photos: draft.photos,
+      };
+    }
+  }
+  const talentId = castable(single(params.talent));
+  return talentId ? { values: { talentId }, photos: [] } : null;
 }

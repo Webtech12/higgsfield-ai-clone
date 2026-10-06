@@ -1,157 +1,100 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import type { ReactNode } from "react";
+import { useWatch } from "react-hook-form";
 
-import { AdBriefInput } from "@/contracts/ad";
-import { CreateProjectResponse } from "@/contracts/project";
 import type { TalentCardModel } from "@/entities/talent";
-import { useRefreshMe } from "@/entities/viewer";
-import { apiRequest } from "@/shared/lib/apiClient";
-import { errorMessage } from "@/shared/lib/apiErrors";
-import { ensureSession } from "@/shared/lib/session";
+import { PageHeader } from "@/shared/ui";
 
-import { usePhotoUploads } from "../hooks/usePhotoUploads";
-import { BRIEF_DEFAULTS, needsTalent } from "../model/briefForm";
-import { BriefCoach } from "./BriefCoach";
-import { BriefSection } from "./BriefSection";
-import { BriefSubmitBar } from "./BriefSubmitBar";
-import { BriefTextField } from "./BriefTextField";
-import { MoodPicker } from "./MoodPicker";
-import { PhotoUploader } from "./PhotoUploader";
-import { TalentPicker } from "./TalentPicker";
-import { TemplatePicker } from "./TemplatePicker";
+import { useAdBrief, type BriefStart } from "../hooks/useAdBrief";
+import { BriefMobileBar } from "./BriefMobileBar";
+import { BriefSteps } from "./BriefSteps";
+import { BriefSummary } from "./BriefSummary";
+import { TalentWall } from "./TalentWall";
+
+/** Smooth for most people, instant for anyone who asked their system for less motion. */
+function scrollToBrief() {
+  const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document
+    .getElementById("brief")
+    ?.scrollIntoView({ behavior: isReduced ? "auto" : "smooth", block: "start" });
+}
 
 /**
- * The ad brief (ADR-024): format, product and photos, message, cast and scene, with Polish with AI
- * before it's sent. Submitting creates the ad (and a guest, on first use) and opens its board.
+ * The Create page's brief (ADR-024, ADR-028). A first visit opens on the talent wall, where clicking
+ * a face casts them; a returning visitor gets straight to work under their recent ads. On wide
+ * screens "Your ad" sits beside the form with the Create button always in view; on phones a bar
+ * pinned above the tab bar holds it.
  */
-export function AdBriefComposer({ roster }: { roster: TalentCardModel[] }) {
-  const router = useRouter();
-  const refreshMe = useRefreshMe();
-  const form = useForm<AdBriefInput>({
-    resolver: zodResolver(AdBriefInput),
-    defaultValues: BRIEF_DEFAULTS,
-  });
-  // The first upload can be what creates the guest: show their starter credits.
-  const photos = usePhotoUploads({ onUploaded: () => void refreshMe() });
-  const template = useWatch({ control: form.control, name: "template" });
-
-  // Uploads finish outside the form; keep its references in step so they're validated and sent.
-  useEffect(() => {
-    form.setValue("references", photos.references);
-  }, [form, photos.references]);
-
-  const create = useMutation({
-    mutationFn: async (brief: AdBriefInput) => {
-      await ensureSession();
-      return apiRequest("/projects", CreateProjectResponse, { method: "POST", body: brief });
-    },
-    onSuccess: ({ projectId }) => {
-      void refreshMe();
-      router.push(`/p/${projectId}`);
-    },
-  });
-  const submit = form.handleSubmit((brief) => {
-    create.mutate(brief);
-  });
+export function AdBriefComposer({
+  roster,
+  start,
+  variant,
+  aboveBrief,
+}: {
+  roster: TalentCardModel[];
+  start: BriefStart | null;
+  variant: "first" | "returning";
+  /** What a returning visitor sees before the brief, e.g. their recent ads. */
+  aboveBrief?: ReactNode;
+}) {
+  const brief = useAdBrief(roster, start);
+  const castId = useWatch({ control: brief.form.control, name: "talentId" });
 
   return (
     <form
-      className="flex flex-col gap-8 rounded-xl border border-border bg-card/60 p-4 shadow-2xl shadow-black/40 backdrop-blur sm:p-6"
-      onSubmit={(event) => void submit(event)}
+      className="flex flex-col"
+      onSubmit={(event) => void brief.submit(event)}
       noValidate
+      aria-label="Ad brief"
     >
-      <BriefSection
-        number={1}
-        title="Format"
-        lede="A proven ad structure: each beat becomes a shot."
-      >
-        <Controller
-          control={form.control}
-          name="template"
-          render={({ field }) => <TemplatePicker value={field.value} onChange={field.onChange} />}
+      {variant === "first" ? (
+        <TalentWall
+          roster={roster}
+          castId={castId}
+          onCast={(talentId) => {
+            brief.form.setValue("talentId", talentId, {
+              shouldValidate: brief.form.formState.isSubmitted,
+            });
+            scrollToBrief();
+          }}
         />
-      </BriefSection>
-
-      <BriefSection
-        number={2}
-        title="Product"
-        lede="What you're selling, and the one reason to want it."
-      >
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="flex flex-col gap-4">
-            <BriefTextField form={form} name="productName" />
-            <BriefTextField form={form} name="benefit" multiline />
-          </div>
-          <PhotoUploader
-            kind="product"
-            photos={photos}
-            label="Product photos"
-            hint="Clear, well-lit shots of the product itself: every frame copies its shape and label from these."
-          />
-        </div>
-      </BriefSection>
-
-      <BriefSection number={3} title="Message" lede="Who it's for, and what they should do next.">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <BriefTextField form={form} name="audience" optional />
-          <BriefTextField form={form} name="message" optional />
-          <BriefTextField form={form} name="cta" optional />
-          <Controller
-            control={form.control}
-            name="moods"
-            render={({ field }) => <MoodPicker value={field.value} onChange={field.onChange} />}
-          />
-        </div>
-      </BriefSection>
-
-      <BriefSection
-        number={4}
-        title="Cast"
-        lede="Real creators who signed a release to appear in AI-made ads."
-      >
-        <Controller
-          control={form.control}
-          name="talentId"
-          render={({ field }) => (
-            <TalentPicker
-              roster={roster}
-              value={field.value}
-              onChange={field.onChange}
-              allowNone={!needsTalent({ template })}
-              error={form.formState.errors.talentId?.message}
+      ) : null}
+      <div className="mx-auto w-full max-w-7xl px-4 pt-12 sm:px-6 sm:pt-16">
+        {variant === "returning" ? (
+          <>
+            <PageHeader
+              eyebrow="New ad"
+              title="What are we making?"
+              lede="Brief it, cast it, and get three storyboarded concepts in about a minute."
             />
-          )}
-        />
-      </BriefSection>
-
-      <BriefSection
-        number={5}
-        title="Scene"
-        lede="Optional: where it happens. The Director fills in the rest."
-      >
-        <div className="grid gap-4 lg:grid-cols-2">
-          <BriefTextField form={form} name="sceneDirection" multiline optional />
-          <PhotoUploader
-            kind="scene"
-            photos={photos}
-            label="Scene photos"
-            hint="Optional: a photo of the place you have in mind."
-          />
+            {aboveBrief ? <div className="mt-12">{aboveBrief}</div> : null}
+          </>
+        ) : null}
+        <div
+          id="brief"
+          className="grid scroll-mt-24 gap-12 pt-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-14 xl:grid-cols-[minmax(0,1fr)_24rem]"
+        >
+          <BriefSteps brief={brief} roster={roster} />
+          <aside className="hidden lg:block">
+            <div className="sticky top-24 max-h-[calc(100dvh-7rem)] overflow-y-auto">
+              <BriefSummary
+                form={brief.form}
+                photos={brief.photos}
+                cast={brief.cast}
+                progress={brief.progress}
+                status={brief.status}
+                isBusy={brief.isBusy}
+              />
+            </div>
+          </aside>
         </div>
-      </BriefSection>
-
-      <BriefCoach form={form} />
-
-      <BriefSubmitBar
-        form={form}
-        isBusy={create.isPending || create.isSuccess}
-        isUploading={photos.isUploading}
-        error={create.isError ? errorMessage(create.error) : null}
+      </div>
+      <BriefMobileBar
+        progress={brief.progress}
+        status={brief.status}
+        isBusy={brief.isBusy}
+        isUploading={brief.photos.isUploading}
       />
     </form>
   );

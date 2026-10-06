@@ -8,6 +8,7 @@ import { useWatch, type UseFormReturn } from "react-hook-form";
 import {
   CoachResult,
   type AdBriefInput,
+  type AdTextField,
   type CoachDraft,
   type CoachSuggestion,
 } from "@/contracts/ad";
@@ -21,10 +22,17 @@ import { canCoach, toCoachDraft } from "../model/briefForm";
 import { CoachResults } from "./CoachResults";
 
 /**
- * Polish with AI: the Director reviews the draft before anything is generated, so a rough brief
- * becomes a strong one. Free; suggestions are applied field by field, never silently (ADR-024).
+ * Polish with AI: the brief is reviewed before anything is generated, so a rough brief becomes a
+ * strong one. Free; suggestions are applied field by field, never silently (ADR-024).
  */
-export function BriefCoach({ form }: { form: UseFormReturn<AdBriefInput> }) {
+export function BriefCoach({
+  form,
+  onApplied,
+}: {
+  form: UseFormReturn<AdBriefInput>;
+  /** A suggestion landed in a field, e.g. so a folded-away section can open to show it. */
+  onApplied?: (field: AdTextField) => void;
+}) {
   const refreshMe = useRefreshMe();
   const [applied, setApplied] = useState<ReadonlySet<number>>(new Set());
   const [productName, benefit, sceneDirection] = useWatch({
@@ -47,21 +55,25 @@ export function BriefCoach({ form }: { form: UseFormReturn<AdBriefInput> }) {
   const apply = (index: number, suggestion: CoachSuggestion) => {
     form.setValue(suggestion.field, suggestion.value, { shouldDirty: true, shouldValidate: true });
     setApplied((current) => new Set(current).add(index));
+    onApplied?.(suggestion.field);
   };
 
   return (
     <section
       aria-labelledby="coach-heading"
-      className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5"
+      className="relative overflow-hidden rounded-2xl border border-primary/25 bg-[radial-gradient(120%_140%_at_0%_0%,rgb(150_202_74/9%),transparent_55%)] p-5 sm:p-6"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="max-w-xl">
-          <h3 id="coach-heading" className="flex items-center gap-2 font-medium">
+          <h3
+            id="coach-heading"
+            className="flex items-center gap-2 font-display text-lg font-semibold tracking-[-0.01em]"
+          >
             <Sparkles className="size-4 text-primary" aria-hidden /> Polish with AI
           </h3>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            A second opinion before you generate: sharper copy, what&apos;s missing and tips for
-            this format. Free.
+            A second opinion before you create: sharper copy, what&apos;s missing and tips for this
+            format. Free.
           </p>
         </div>
         <Button

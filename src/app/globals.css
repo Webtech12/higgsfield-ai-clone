@@ -25,6 +25,8 @@
   --primary-foreground: #0a0a0a;
   /* Their neon lime: selection and "ready" details only, never large areas. */
   --neon: #d8ff36;
+  /* Green for small text: the brand green itself on dark; a deeper one on light (see below). */
+  --primary-ink: #96ca4a;
 
   --secondary: #1b1b1b;
   --secondary-foreground: var(--foreground);
@@ -56,6 +58,8 @@
   --accent: #e9e9e6;
   --border: rgb(0 0 0 / 10%);
   --input: rgb(0 0 0 / 16%);
+  /* The brand green fails contrast as small text on white (2:1); this deeper one passes AA. */
+  --primary-ink: #4f7a1c;
   background-color: var(--background);
   color: var(--foreground);
 }
@@ -70,6 +74,7 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-neon: var(--neon);
+  --color-primary-ink: var(--primary-ink);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);

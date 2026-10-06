@@ -8,7 +8,7 @@ import { Button, DialogClose } from "@/shared/ui";
 
 /**
  * Casting: one talent from the roster of people who signed a release (ADR-024). A format without a
- * person (product hero) also offers "no talent".
+ * person (product hero) also offers "no talent". On phones the roster scrolls sideways.
  */
 export function TalentPicker({
   roster,
@@ -25,7 +25,7 @@ export function TalentPicker({
 }) {
   if (roster.length === 0 && !allowNone) {
     return (
-      <p className="rounded-lg border border-border bg-background/40 p-4 text-sm text-muted-foreground">
+      <p className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground">
         The talent roster is being set up. Choose the Product hero format to make an ad without a
         person, or check back soon.
       </p>
@@ -34,12 +34,14 @@ export function TalentPicker({
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="sr-only">Talent</legend>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 xl:grid-cols-5">
         {allowNone ? (
           <label
             className={cn(
-              "relative flex aspect-[4/5] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border p-3 text-center transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
-              value === null ? "border-primary bg-primary/5" : "border-border hover:border-input",
+              "relative flex aspect-[4/5] w-[44%] shrink-0 cursor-pointer snap-start flex-col items-center justify-center gap-2 rounded-2xl border p-4 text-center transition-colors duration-200 has-focus-visible:ring-2 has-focus-visible:ring-ring sm:w-auto",
+              value === null
+                ? "border-primary bg-primary/[0.07]"
+                : "border-dashed border-border hover:border-foreground/25",
             )}
           >
             <input
@@ -52,13 +54,16 @@ export function TalentPicker({
               }}
             />
             <Package className="size-6 text-muted-foreground" aria-hidden />
-            <span className="text-sm font-medium">No talent</span>
+            <span className="text-sm font-semibold">No talent</span>
             <span className="text-xs text-muted-foreground">The product is the hero</span>
           </label>
         ) : null}
         {roster.map((talent) => (
-          <div key={talent.id} className="flex flex-col gap-1">
-            <label className="relative cursor-pointer rounded-lg has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">
+          <div
+            key={talent.id}
+            className="flex w-[44%] shrink-0 snap-start flex-col gap-1 sm:w-auto"
+          >
+            <label className="relative cursor-pointer rounded-2xl has-focus-visible:ring-2 has-focus-visible:ring-ring">
               <input
                 type="radio"
                 name="talent"
@@ -74,7 +79,7 @@ export function TalentPicker({
             <TalentProfile
               talent={talent}
               trigger={
-                <Button type="button" variant="ghost" size="sm" className="self-start">
+                <Button type="button" variant="ghost" size="sm" className="-ml-2 self-start">
                   View profile
                 </Button>
               }
@@ -82,6 +87,7 @@ export function TalentPicker({
                 <DialogClose asChild>
                   <Button
                     type="button"
+                    size="lg"
                     onClick={() => {
                       onChange(talent.id);
                     }}

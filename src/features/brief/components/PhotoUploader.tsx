@@ -47,12 +47,12 @@ export function PhotoUploader({
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm font-medium">{label}</p>
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground tabular-nums">
           {items.length}/{limit}
         </span>
       </div>
       <ul
-        className="flex flex-wrap gap-2"
+        className="flex flex-wrap gap-2.5"
         aria-label={`${label}: ${String(items.length)} of ${String(limit)}`}
       >
         {items.map((item, index) => (
@@ -76,7 +76,7 @@ export function PhotoUploader({
                 event.preventDefault();
                 addFiles(event.dataTransfer.files);
               }}
-              className="flex size-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-md border border-dashed border-input text-xs text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+              className="flex size-28 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-input text-xs font-medium text-muted-foreground transition-[border-color,color,background-color] duration-200 ease-out-quart hover:border-primary hover:bg-primary/5 hover:text-foreground has-focus-visible:ring-2 has-focus-visible:ring-ring"
             >
               <ImagePlus className="size-5" aria-hidden />
               Add photo
@@ -113,7 +113,7 @@ function Thumbnail({
   onRemove: () => void;
 }) {
   return (
-    <li className="relative size-24 overflow-hidden rounded-md border border-border bg-muted">
+    <li className="relative size-28 animate-rise overflow-hidden rounded-xl border border-border bg-muted">
       {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL preview */}
       <img
         src={item.previewUrl}
@@ -138,7 +138,7 @@ function Thumbnail({
       <button
         type="button"
         onClick={onRemove}
-        className="absolute top-1 right-1 rounded-full bg-background/80 p-1 text-foreground transition-colors hover:bg-background focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="absolute top-1.5 right-1.5 rounded-full bg-black/70 p-1.5 text-white backdrop-blur transition-colors hover:bg-black focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         aria-label={`Remove ${label}`}
       >
         <X className="size-3.5" aria-hidden />
