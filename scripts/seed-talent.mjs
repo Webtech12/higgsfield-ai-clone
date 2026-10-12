@@ -19,6 +19,9 @@ import sharp from "sharp";
 import { z } from "zod";
 
 const MAX_EDGE = 2000;
+// A full casting set (front, profiles, three-quarters, full body, expressions), so each shot can be
+// drawn from the pose that fits it. Order still matters: the first photos are the best references.
+const MAX_PHOTOS = 30;
 const args = process.argv.slice(2);
 const isFake = args.includes("--fake");
 const isDryRun = args.includes("--dry-run");
@@ -35,7 +38,7 @@ const Talent = z.object({
   bio: z.string().min(1).max(400),
   tags: z.array(z.string().min(1).max(24)).max(6),
   // The fake roster has no photo files: its placeholders are drawn below.
-  photos: isFake ? z.array(Photo).max(0).default([]) : z.array(Photo).min(1).max(5),
+  photos: isFake ? z.array(Photo).max(0).default([]) : z.array(Photo).min(1).max(MAX_PHOTOS),
   consent: z.object({
     signedOn: z.iso.date(),
     scope: z.string().min(20).max(400),

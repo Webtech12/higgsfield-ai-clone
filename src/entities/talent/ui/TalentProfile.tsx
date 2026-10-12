@@ -69,7 +69,10 @@ export function TalentProfile({
   );
 }
 
-/** One large photo; the thumbnails under it choose which. */
+/**
+ * One large photo; the thumbnails under it choose which. A full casting set runs to 30 photos, so
+ * the thumbnails are one row that scrolls sideways rather than a grid that pushes the profile down.
+ */
 function ProfilePhotos({ talent }: { talent: TalentCardModel }) {
   const [shownIndex, setShownIndex] = useState(0);
   const shown = talent.photos[shownIndex] ?? talent.cover;
@@ -82,11 +85,22 @@ function ProfilePhotos({ talent }: { talent: TalentCardModel }) {
           alt={shown.alt}
           className="absolute inset-0 size-full object-cover"
         />
+        {count > 1 ? (
+          <span
+            aria-hidden
+            className="absolute right-3 bottom-3 rounded-full bg-black/65 px-2.5 py-1 text-xs font-medium text-white tabular-nums backdrop-blur-md"
+          >
+            {shownIndex + 1} / {count}
+          </span>
+        ) : null}
       </div>
       {count > 1 ? (
-        <ul className="grid grid-cols-4 gap-2" aria-label={`Photos of ${talent.name}`}>
+        <ul
+          className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 py-1"
+          aria-label={`Photos of ${talent.name}`}
+        >
           {talent.photos.map((photo, index) => (
-            <li key={photo.url}>
+            <li key={photo.url} className="shrink-0 snap-start">
               <button
                 type="button"
                 aria-label={`Show photo ${String(index + 1)} of ${String(count)}`}
@@ -95,7 +109,7 @@ function ProfilePhotos({ talent }: { talent: TalentCardModel }) {
                   setShownIndex(index);
                 }}
                 className={cn(
-                  "relative block aspect-square w-full overflow-hidden rounded-lg bg-muted ring-offset-2 ring-offset-popover transition-opacity duration-200 ease-out-quart outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "relative block size-16 overflow-hidden rounded-lg bg-muted ring-offset-2 ring-offset-popover transition-opacity duration-200 ease-out-quart outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   index === shownIndex ? "ring-2 ring-primary" : "opacity-55 hover:opacity-100",
                 )}
               >
